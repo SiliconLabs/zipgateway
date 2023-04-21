@@ -180,6 +180,7 @@ static void ( *cbFuncZWReplaceFailedNode ) ( BYTE txStatus );
 static VOID_CALLBACKFUNC(cbFuncZWSendSUCID)(BYTE, TX_STATUS_TYPE*);
 /** @} */
 
+static bool is_nodeid_basetype_8();
 const char* zw_lib_names[] = {
     "Unknown",
     "Static controller",
@@ -962,6 +963,12 @@ static void Dispatch( BYTE *pData , uint16_t len)
             source_node = (pData[IDX_DATA + (j++)]) << 8; //j is (1 in LR)
           }
           source_node |= pData[IDX_DATA + (j++)]; //j is 1 (2 in LR)
+          if(nodemask_nodeid_is_invalid(source_node)) {
+            if(is_nodeid_basetype_8() && lr_enabled) {
+              SER_PRINTF("Invalid node id: %d received because Long Range is enabled and Nodeid base type is 8. Setting it to 16", source_node);
+              SerialAPI_EnableLR();
+            }
+          }
           // Rename variable 'len' that hides/shadows function parameter
           uint8_t length = pData[ IDX_DATA + (j++) ]; //j is 2 (3 in LR)
           if (DetectBufferOverflow(length) || (IDX_DATA + j + length) > len) // Stop processing if the length is larger than the buffer.
@@ -1317,6 +1324,8 @@ static void Dispatch( BYTE *pData , uint16_t len)
       break;
 
     case FUNC_ID_SERIALAPI_STARTED:
+
+      lr_enabled = 0;
       /* ZW->HOST: bWakeupReason | bWatchdogStarted | deviceOptionMask | */
       /*           nodeType_generic | nodeType_specific | cmdClassLength | cmdClass[] */
       // Do not issue the callback if the packet size is larger than our buffer.
@@ -1754,13 +1763,14 @@ void MemoryGetID( BYTE *pHomeID, uint16_t *pNodeID )
     pHomeID[ 2 ] = buffer[ IDX_DATA + (j++) ];
     pHomeID[ 3 ] = buffer[ IDX_DATA + (j++) ];
     if (lr_enabled  && (byLen == 8)) {
-      WRN_PRINTF("Short frame for Long range enabled in FUNC_ID_MEMORY_GET_ID");
+       WRN_PRINTF("Short frame for Long range enabled in FUNC_ID_MEMORY_GET_ID");
+      *pNodeID = 0;
+    } else {
+      if (lr_enabled && (byLen == 9)) {
+        *pNodeID = buffer[ IDX_DATA + (j++) ] << 8;
+      }
+      *pNodeID |= buffer[ IDX_DATA + (j++) ];
     }
-
-    if (lr_enabled && (byLen == 9)) {
-      *pNodeID = buffer[ IDX_DATA + (j++) ] << 8;
-    }
-    *pNodeID |= buffer[ IDX_DATA + (j++) ];
     if((*pNodeID < 1) ||
        ((*pNodeID > ZW_CLASSIC_MAX_NODES) && (*pNodeID < ZW_LR_MIN_NODE_ID)) ||
        (*pNodeID > ZW_LR_MAX_NODE_ID)) {
@@ -2711,6 +2721,18 @@ void SerialAPI_ApplicationNodeInformation( BYTE listening, APPL_NODE_TYPE nodeTy
     SendFrame(FUNC_ID_SERIAL_API_APPL_NODE_INFORMATION, buffer, idx );
 }
 
+static bool is_nodeid_basetype_8()
+{
+    BYTE buff[9]; /* FUNC_ID_MEMORY_GET_ID returns max 9 bytes*/ 
+    idx = 0;
+    byLen = 0;
+    SendFrameWithResponse( FUNC_ID_MEMORY_GET_ID,0, 0, buff, &byLen );
+    if (byLen == 8) {
+      return true;
+    } else {
+      return false;
+    }
+}
 /**
  * @brief Sets the nodeid type for the serial api
  * 
