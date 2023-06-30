@@ -29,6 +29,7 @@ CC_FirmwareUpdate.c
 CC_Portal.c
 CC_Wakeup.c
 CC_Multicmd.c
+CC_DeviceResetLocally.c
 )
 
 set(GW_SRC
