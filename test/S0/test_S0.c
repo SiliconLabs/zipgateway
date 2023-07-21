@@ -93,6 +93,24 @@ void sec0_sd_callback(BYTE txStatus,void* user, TX_STATUS_TYPE *txStatEx) {
     printf("sec0_sd_callback from line %u\n", (unsigned int)user);
 }
 
+int dev_urandom(int len, uint8_t *buf)
+{ FILE * fp;
+  size_t read;
+  int error = 0; 
+
+  printf("-------in my dev_urandom\n");
+  
+  fp = fopen("/dev/urandom", "r");
+  read = fread(buf, 1, len, fp);
+  if (read < len) {
+      printf("Error: Random number generation failed\n");
+      error = 1;
+  }
+
+  fclose(fp);
+
+  return error ? 0 : 1;
+}
 
 /****************************************Test cases*******************************************************/
 
@@ -381,4 +399,14 @@ void test_nonce_blacklist() {
   TEST_ASSERT_TRUE(sec0_is_nonce_blacklisted(1, 2, (const uint8_t*)"99999999"));
   TEST_ASSERT_TRUE(sec0_is_nonce_blacklisted(1, 2, (const uint8_t*)"AAAAAAAA"));
   TEST_ASSERT_TRUE(sec0_is_nonce_blacklisted(1, 2, (const uint8_t*)"BBBBBBBB"));
+}
+
+void test_sec0_reset_netkey()
+{  uint8_t s0_key[S0_KEY_SIZE]={0};
+
+   sec0_reset_netkey();
+   memcpy(s0_key, networkKey, sizeof(s0_key));
+   sec0_reset_netkey();
+
+   TEST_ASSERT_NOT_EQUAL(memcmp(s0_key, networkKey, sizeof(s0_key)), 0);
 }
