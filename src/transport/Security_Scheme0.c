@@ -8,6 +8,7 @@
 #include "ZW_PRNG.h"
 #include "ZIP_Router_logging.h"
 #include "zip_router_config.h"
+#include "random.h"
 #define NONCE_OPT 0
 
 /**/
@@ -22,6 +23,8 @@
 
 #define NONCE_BLACKLIST_SIZE 10
 #define RECEIVERS_NONCE_SIZE 8    /* The size of the nonce field in a Nonce Report */
+
+#define S0_KEY_SIZE 16  /* The S0 Key Size */
 
 typedef enum {
   NONCE_GET,
@@ -59,7 +62,7 @@ typedef struct _AUTHDATA_ {
 extern u8_t send_data(ts_param_t* p, const u8_t* data, u16_t len,ZW_SendDataAppl_Callback_t cb,void* user);
 
 static sec_tx_session_t tx_sessions[NUM_TX_SESSIONS];
-uint8_t networkKey[16];                 /* The master key */
+uint8_t networkKey[S0_KEY_SIZE] = {0};                 /* The master key */
 
 
 /* Nonce blacklist type*/
@@ -885,10 +888,24 @@ state_error:
 }
 
 
-void sec0_reset_netkey() {
-  LOG_PRINTF("Reinitializing S0 network key (S2 keys are unchanged)\n");
-  aes_random8( &networkKey[0] );
-  aes_random8( &networkKey[8] );
+void sec0_reset_netkey(void) {
+  uint8_t n=0;
+  bool bSuccess=false;
 
-  nvm_config_set(security_netkey,networkKey);
+  LOG_PRINTF("Reinitializing S0 network key (S2 keys are unchanged)\n");
+  do {
+    bSuccess = dev_urandom(sizeof(networkKey),networkKey);
+    if (bSuccess) {
+      break;
+    }
+  } while (n++ <= 10); 
+
+  if(bSuccess) {
+    nvm_config_set(security_netkey,networkKey);
+  }
+  else {
+    ERR_PRINTF("Failed to generate random S0 key. Security compromised!\n");
+  }
+
+  ASSERT(bSuccess);
 }
