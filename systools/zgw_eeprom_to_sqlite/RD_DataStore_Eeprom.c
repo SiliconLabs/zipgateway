@@ -585,7 +585,7 @@ bool node_sanity_check(rd_node_database_entry_t *n, int nodeid)
     WRN_PRINTF("node %u - invalid length of endpoints: %u\n", n->nodeid, list_length(n->endpoints));
     return false;
   }
-  /* FIXME: Only in Ring's case */
+  /* FIXME: Only consumer case Relate-to: f83970626 */
   /*
   if (n->nodeid == 2 || n->nodeid == 3 || n->nodeid == 4 || n->nodeid == 5) {
     WRN_PRINTF("node %u - virtual nodes assumed to be node 2, 3, 4, 5\n", n->nodeid);

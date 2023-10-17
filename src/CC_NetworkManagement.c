@@ -307,7 +307,7 @@ ageToTime(BYTE age)
 
 
 
-// Ring Patch
+// Consumer Patch Relate-to: ZGW-3383
 int should_skip_flirs_nodes_be_used()
 {
  /* ADD_NODE_OPTION_SFLND is only available in 7.19.0 or above.
