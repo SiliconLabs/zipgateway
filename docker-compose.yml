@@ -1,0 +1,10 @@
+# -*- coding: utf-8 -*-
+
+version: "2"
+
+services:
+  default:
+    build: .
+    command: tests
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
