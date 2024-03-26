@@ -11,5 +11,7 @@ jobs:
     - uses: actions/checkout@v4.1.1
       with:
         fetch-depth: 0
+    - name: Setup qemu to support foreign arch
+      run: sudo apt-get update && sudo apt-get install -y binfmt-support qemu-system-arm qemu-user-static
     - name: Build Docker image from sources
       run: docker build .

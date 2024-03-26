@@ -1,7 +1,9 @@
 #!/bin/echo run with: docker build . -f
 # -*- coding: utf-8 -*-
 
-FROM i386/debian:stretch
+FROM arm32v7/debian:stretch
+ENV target_debian_arch armhf
+
 LABEL maintainer="Philippe Coval <philippe.coval@silabs.com>"
 
 ENV DEBIAN_FRONTEND noninteractive
