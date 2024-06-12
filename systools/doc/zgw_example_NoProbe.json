@@ -1,0 +1,350 @@
+{
+   "ZGWBackupInfo" : {
+      "versionMinor" : 0,
+      "versionMajor" : 1,
+      "sourceChipType" : 5,
+      "sourceZGWVersion" : "2.61.01",
+      "sourceProtocolVersion" : "6.71.05"
+   },
+   "zgw" : {
+      "nodeList" : [
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 1,
+               "homeId" : "0xE1DB3EDC"
+            },
+            "isZGW" : true,
+            "zgwZWNodeData" : {
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "86727359857a",
+                        "nonSecureNIF" : "10015e86727a7322855970565a6c557a74989f"
+                     },
+                     "userIcon" : 1280,
+                     "installerIcon" : 1280,
+                     "epMDNSData" : {
+                        "name" : "gateway",
+                        "location" : ""
+                     }
+                  }
+               ],
+               "probeState" : {
+                  "state" : "DONE",
+                  "versionCap" : "07",
+                  "ccVersions" : [
+                     { "commandClassId" : 134, "version" : 1},
+                     { "commandClassId" : 94,  "version" : 1},
+                     { "commandClassId" : 114, "version" : 1},
+                     { "commandClassId" : 133, "version" : 1},
+                     { "commandClassId" : 122, "version" : 1},
+                     { "commandClassId" : 115, "version" : 1},
+                     { "commandClassId" : 34,  "version" : 1},
+                     { "commandClassId" : 89,  "version" : 1},
+                     { "commandClassId" : 86,  "version" : 1},
+                     { "commandClassId" : 90,  "version" : 1},
+                     { "commandClassId" : 108, "version" : 1},
+                     { "commandClassId" : 85,  "version" : 1},
+                     { "commandClassId" : 116, "version" : 1},
+                     { "commandClassId" : 152, "version" : 1},
+                     { "commandClassId" : 159, "version" : 1}
+                  ]
+               },
+               "liveness" : {
+                  "wakeupInterval" : 5000,
+                  "livenessState" : "OK"
+               },
+               "nodeProdId" : {
+                  "manufacturerId" : 1,
+                  "productType" : 1,
+                  "productId" : 2
+               },
+               "grantedKeys" : 113,
+               "mode": "MODE_ALWAYSLISTENING",
+               "nodeType" : "BASIC_TYPE_STATIC_CONTROLLER"
+            },
+            "ipData" : {
+              "mDNSNodeName" : ""
+            }
+         },
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 2,
+               "homeId" : "0xE1DB3EDC"
+            },
+            "zgwZWNodeData" : {
+               "nodeProdId" : {
+                  "manufacturerId" : 0,
+                  "productId" : 3,
+                  "productType" : 3
+               },
+               "grantedKeys" : 1,
+               "probeState" : {
+                  "state" : "DONE",
+                  "versionCap" : "03",
+                  "ccVersions" : [
+                     { "commandClassId" : 134, "version" : 2 },
+                     { "commandClassId" : 94,  "version" : 2 },
+                     { "commandClassId" : 114, "version" : 2 },
+                     { "commandClassId" : 132, "version" : 2 },
+                     { "commandClassId" : 133, "version" : 2 },
+                     { "commandClassId" : 142, "version" : 3 }
+                  ]
+               },
+               "liveness" : {
+                  "livenessState" : "OK",
+                  "wakeupInterval" : 4200,
+                  "lastUpdate" : 0,
+                  "lastAwake" : 0
+               },
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "86858e59725a738071847a",
+                        "nonSecureNIF" : "10015e98"
+                     },
+                     "installerIcon" : 3079,
+                     "userIcon" : 3079,
+                     "epMDNSData" : {
+                        "name" : "Sensor",
+                        "location" : "Hiding in the corner"
+                     }
+                  }
+               ],
+               "zwNodeData" : {
+                  "nodeId" :2
+               },
+               "mode": "MODE_FREQUENTLYLISTENING",
+               "nodeType": "BASIC_TYPE_SLAVE"
+            },
+            "ipData" : {
+              "mDNSNodeName" : "Sensor Device"
+            }
+         },
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 3,
+               "homeId" : "0xE1DB3EDC"
+            },
+            "zgwZWNodeData" : {
+               "nodeProdId" : {
+                  "productId" : 2,
+                  "manufacturerId" : 0,
+                  "productType" : 3
+               },
+               "grantedKeys" : 0,
+               "probeState" : {
+                  "state" : "DONE",
+                  "versionCap" : "03",
+                  "ccVersions" : [
+                     { "commandClassId" : 134, "version" : 2 },
+                     { "commandClassId" : 94,  "version" : 2 },
+                     { "commandClassId" : 114, "version" : 2 },
+                     { "commandClassId" : 133, "version" : 2 },
+                     { "commandClassId" : 142, "version" : 3 }
+                  ]
+               },
+               "liveness" : {
+                  "livenessState" : "OK",
+                  "wakeupInterval" : 0,
+                  "lastUpdate" : 0,
+                  "lastAwake" : 0
+               },
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "",
+                        "nonSecureNIF" : "10015e25858e5986725a737a"
+                     },
+                     "installerIcon" : 1792,
+                     "userIcon" : 1792,
+                     "epMDNSData" : {
+                        "name" : "Binary Switch OnOff",
+                        "location" : "Hiding in the corner"
+                     }
+                  }
+               ],
+               "zwNodeData" : {
+                  "nodeId" :3
+               },
+               "mode": "MODE_ALWAYSLISTENING",
+               "nodeType": "BASIC_TYPE_ROUTING_SLAVE"
+            },
+            "ipData" : {
+              "mDNSNodeName" : "Switch"
+            }
+         },
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 4,
+               "homeId" : "0xE1DB3EDC"
+            },
+            "zgwZWNodeData" : {
+               "nodeProdId" : {
+                  "productId" : 11,
+                  "manufacturerId" : 0,
+                  "productType" : 3
+               },
+               "grantedKeys" : 1,
+               "probeState" : {
+                  "state" : "DONE",
+                  "versionCap" : "03",
+                  "ccVersions" : [
+                     { "commandClassId" : 134, "version" : 2 },
+                     { "commandClassId" : 94,  "version" : 2 },
+                     { "commandClassId" : 114, "version" : 2 },
+                     { "commandClassId" : 96,  "version" : 4 },
+                     { "commandClassId" : 133, "version" : 2 },
+                     { "commandClassId" : 142, "version" : 3 }
+                  ]
+               },
+               "liveness" : {
+                  "livenessState" : "OK",
+                  "wakeupInterval" : 0,
+                  "lastUpdate" : 0,
+                  "lastAwake" : 0
+               },
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "2526858e597186725a73607a",
+                        "nonSecureNIF" : "10015e98"
+                     },
+                     "userIcon" : 2048,
+                     "installerIcon" : 2048,
+                     "epMDNSData" : {
+                        "name" : "EP1",
+                        "location" : "Hiding in the corner"
+                     }
+                  },
+                  {
+                     "endpointId" : 1,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "2585598e71",
+                        "nonSecureNIF" : "10015e98"
+                     },
+                     "userIcon" : 8,
+                     "installerIcon" : 0,
+                     "epMDNSData" : {
+                        "name" : "EP2",
+                        "location" : "Hiding in the corner"
+                     }
+                  },
+                  {
+                     "endpointId" : 2,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "2585598e71",
+                        "nonSecureNIF" : "10015e98"
+                     },
+                     "userIcon" : 8,
+                     "installerIcon" : 0,
+                     "epMDNSData" : {
+                        "name" : "EP3",
+                        "location" : "Hiding in the corner"
+                     }
+                  },
+                  {
+                     "endpointId" : 3,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "2685598e71",
+                        "nonSecureNIF" : "10015e98"
+                     },
+                     "userIcon" : 8,
+                     "installerIcon" : 0,
+                     "epMDNSData" : {
+                        "name" : "EP4",
+                        "location" : "Hiding in the corner"
+                     }
+                  }
+               ],
+               "zwNodeData" : {
+                  "nodeId" :4
+               },
+               "mode": "MODE_ALWAYSLISTENING",
+               "nodeType": "BASIC_TYPE_ROUTING_SLAVE"
+            },
+            "ipData" : {
+              "mDNSNodeName" : "Multi channel service"
+            }
+         },
+         {
+             "nodeUID" : {
+                 "uidType" : "ZW Net ID",
+                 "nodeId" : 5,
+                 "homeId" : "0xE1DB3EDC"
+             },
+             "zgwZWNodeData" : {
+                 "nodeProdId" : {
+                     "manufacturerId" : 0,
+                     "productId" : 3,
+                     "productType" : 3
+                 },
+                 "grantedKeys" : 1,
+                 "probeState" : {
+                     "state" : "DONE",
+                     "versionCap" : "03",
+                     "ccVersions" : [
+                         { "commandClassId" : 134, "version" : 2 },
+                         { "commandClassId" : 94,  "version" : 2 },
+                         { "commandClassId" : 114, "version" : 2 },
+                         { "commandClassId" : 132, "version" : 2 },
+                         { "commandClassId" : 133, "version" : 2 },
+                         { "commandClassId" : 142, "version" : 3 }
+                     ]
+                 },
+                 "liveness" : {
+                     "livenessState" : "FAILING",
+                     "wakeupInterval" : 4000,
+                     "lastUpdate" : 0,
+                     "lastAwake" : 0
+                 },
+                 "endpoints" : [
+                     {
+                         "endpointId" : 0,
+                         "endpointInfoFrames" : {
+                             "secureNIF" : "86858e59725a738071847a",
+                             "nonSecureNIF" : "10015e98"
+                         },
+                         "installerIcon" : 3079,
+                         "userIcon" : 3079,
+                         "epMDNSData" : {
+                             "name" : "PIRSensor",
+                             "location" : "Hiding in the corner"
+                         }
+                     }
+                 ],
+                 "zwNodeData" : {
+                     "nodeId" :5
+                 },
+                 "mode": "MODE_NONLISTENING",
+                 "nodeType": "BASIC_TYPE_SLAVE"
+             },
+             "ipData" : {
+                 "mDNSNodeName" : "PIR Sensor Device"
+             }
+         }
+      ],
+      "zwNetworkData" : {
+         "zwSecurity" : {
+            "ECDHPrivateKey" : "D31A084C0A0C39ED948B8439AE762882E7710C413B6A90673478D9157A6E21F1",
+            "S0key" : "121C08D89F8B66FD9E3D642D9946C327",
+            "S2UnauthenticatedKey" : "401619B5BBF1D7E16D564A041AFD9CAB",
+            "S2AuthenticatedKey" : "02CF4AEA152C1EC6D89B88C45289E056",
+            "S2AccessKey" : "0477FF9C7CEC45FA72CC9E8A5B62CE51",
+            "S2AuthenticatedKeyLR": "4B6312E0422224B1E09598526506C91C",
+            "S2AccessKeyLR": "05E51115A6F72CDE7C18406745E74AE2"
+         }
+      },
+      "zgwTemporaryAssociationData": {
+          "virtualNodeList": [6, 7, 8, 9]
+      }
+   }
+}

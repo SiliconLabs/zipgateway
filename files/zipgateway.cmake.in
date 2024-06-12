@@ -1,0 +1,82 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          zipgateway
+# Required-Start:    $network $local_fs $remote_fs
+# Required-Stop:     $network $local_fs $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: start Z/IP Gateway (zipgateway)
+### END INIT INFO
+
+WLAN=
+PIDDIR=/var/run
+ZIPGATEWAYPID=$PIDDIR/zipgateway.pid
+
+# clear conflicting settings from the environment
+unset TMPDIR
+
+# See if the daemons are there
+test -x ${CMAKE_INSTALL_PREFIX}/sbin/zipgateway || exit 0
+
+. /lib/lsb/init-functions
+
+case $1 in
+	start)
+		if [ "$ZIPGATEWAY_DISABLED" != Yes ]; then
+			log_daemon_msg "Starting Z/IP Gateway" zipgateway
+			# Make sure we have our PIDDIR, even if it's on a tmpfs
+			install -o root -g root -m 755 -d $PIDDIR
+			install -o root -g root -m 755 -d ${CMAKE_INSTALL_PREFIX}/var/lib/zipgateway 
+			if ! start-stop-daemon --start --background --make-pidfile --pidfile $ZIPGATEWAYPID --quiet --oknodo --startas /bin/bash -- -c "exec ${CMAKE_INSTALL_PREFIX}/sbin/zipgateway -- > /var/log/zipgateway.log 2>&1"
+			then
+				log_end_msg 1
+				exit 1
+			fi
+			log_end_msg 0
+		fi
+
+		;;
+	stop)
+		log_daemon_msg "Stopping Z/IP Gateway" zipgateway
+
+        if [ -n "$WLAN" ]; then
+		    pidof parprouted > /dev/null 2>&1 && {
+		    	echo "Stopping parprouted"
+		    	killall -SIGKILL parprouted
+		    }
+		    pidof udprelay > /dev/null 2>&1 && {
+		    	echo "Stopping UDP relay"
+		    	killall -SIGKILL udprelay
+		    }
+        fi
+		start-stop-daemon --stop --quiet --pidfile $ZIPGATEWAYPID
+		# Wait a little and remove stale PID file
+		sleep 1
+		if [ -f $ZIPGATEWAYPID ] && ! ps h `cat $ZIPGATEWAYPID` > /dev/null
+		then
+			# Stale PID file (zipgateway was succesfully stopped),
+			# remove it (should be removed by zipgateway itself IMHO.)
+			rm -f $ZIPGATEWAYPID
+		fi
+		log_end_msg 0
+		;;
+	restart|force-reload)
+		if init_is_upstart; then
+			exit 1
+		fi
+		$0 stop
+		sleep 1
+		$0 start
+		;;
+        status)
+		status_of_proc -p $ZIPGATEWAYPID ${CMAKE_INSTALL_PREFIX}/sbin/zipgateway zipgateway
+		exit $?
+		;;
+	*)
+		echo "Usage: ${CMAKE_INSTALL_PREFIX}/init.d/zipgateway {start|stop|restart|force-reload|status}"
+		exit 1
+		;;
+esac
+
+exit 0

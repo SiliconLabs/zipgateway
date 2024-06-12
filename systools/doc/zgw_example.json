@@ -1,0 +1,235 @@
+{
+   "ZGWBackupInfo" : {
+      "versionMinor" : 0,
+      "versionMajor" : 1,
+      "sourceChipType" : 5,
+      "sourceZGWVersion" : "2.61.01",
+      "sourceProtocolVersion" : "6.71.05"
+   },
+   "zgw" : {
+      "nodeList" : [
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 1,
+               "homeId" : "0xFAB5b0b0"
+            },
+            "pvsData" : {},
+            "zgwZWNodeData" : {
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "524D348F",
+                        "nonSecureNIF" : "10019F98"
+                     },
+                     "userIcon" : 1280,
+                     "installerIcon" : 1280,
+                     "epMDNSData" : {
+                        "name" : "gateway",
+                        "location" : ""
+                     }
+                  }
+               ],
+               "probeState" : {
+                  "versionCap" : "05",
+                  "ccVersions" : [
+                     {
+                        "version" : 1,
+                        "commandClassId" : 134
+                     },
+                     {
+                        "version" : 2,
+                        "commandClassId" : 94
+                     },
+                     {
+                        "version" : 5,
+                        "commandClassId" : 114
+                     },
+                     {
+                        "commandClassId" : 132,
+                        "version" : 1
+                     },
+                     {
+                        "version" : 1,
+                        "commandClassId" : 96
+                     },
+                     {
+                        "commandClassId" : 133,
+                        "version" : 1
+                     },
+                     {
+                        "commandClassId" : 142,
+                        "version" : 1
+                     },
+                     {
+                        "commandClassId" : 132,
+                        "version" : 1
+                     },
+                     {
+                        "version" : 1,
+                        "commandClassId" : 99
+                     }
+                  ],
+                  "state" : "DONE"
+               },
+               "liveness" : {
+                  "wakeupInterval" : 5000,
+                  "livenessState" : "OK"
+               },
+               "nodeProdId" : {
+                  "manufacturerId" : 1,
+                  "productType" : 2,
+                  "productId" : 3
+               },
+               "grantedKeys" : 113
+            },
+            "ipData" : {
+
+            }
+         },
+         {
+            "nodeUID" : {
+               "DSK" : "0x1234567890ABCDEF2234567890ABCDEF",
+               "uidType" : "DSK"
+            },
+            "pvsData" : {},
+            "zgwZWNodeData" : {
+               "nodeProdId" : {
+                  "productId" : 3,
+                  "manufacturerId" : 1,
+                  "productType" : 33153
+               },
+               "grantedKeys" : 1,
+               "probeState" : {
+                  "versionCap" : "03",
+                  "ccVersions" : [
+                     {
+                        "commandClassId" : 134,
+                        "version" : 1
+                     },
+                     {
+                        "commandClassId" : 22,
+                        "version" : 1
+                     },
+                     {
+                        "commandClassId" : 152,
+                        "version" : 1
+                     },
+                     {
+                        "version" : 1,
+                        "commandClassId" : 23
+                     },
+                     {
+                        "commandClassId" : 24,
+                        "version" : 1
+                     }
+                  ],
+                  "nodeProperties" : 5
+               },
+               "liveness" : {
+                  "livenessState" : "OK",
+                  "wakeupInterval" : 1000,
+                  "lastUpdate" : 0,
+                  "lastAwake" : 0
+               },
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "214d2223",
+                        "nonSecureNIF" : "100198"
+                     },
+                     "userIcon" : 8,
+                     "installerIcon" : 3328,
+                     "epMDNSData" : {
+                        "name" : "Sensor",
+                        "location" : "Hiding in the corner"
+                     }
+                  },
+                  {
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "214d2223",
+                        "nonSecureNIF" : "100198"
+                     },
+                     "endpointId" : 1,
+                     "epMDNSData" : {
+                        "name" : "2",
+                        "location" : "slot 2"
+                     },
+                     "userIcon" : 8,
+                     "installerIcon" : 7
+                  },
+                  {
+                     "endpointInfoFrames" : {
+                        "nonSecureNIF" : "100198",
+                        "secureNIF" : "214d2223"
+                     },
+                     "endpointId" : 2,
+                     "epMDNSData" : {
+                        "name" : "first",
+                        "location" : "slot 1"
+                     },
+                     "userIcon" : 8,
+                     "installerIcon" : 7
+                  },
+                  {
+                     "epMDNSData" : {
+                        "location" : "slots",
+                        "name" : "aggregation"
+                     },
+                     "endpointAggregation" : [
+                        1,
+                        2
+                     ],
+                     "userIcon" : 8,
+                     "installerIcon" : 7,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "214d2223",
+                        "nonSecureNIF" : "100198"
+                     },
+                     "endpointId" : 3
+                  }
+               ],
+               "zwNodeData" : {
+                  "nodeId" : 2
+               }
+            },
+            "ipData" : {}
+         },
+         {
+            "zgwZWNodeData" : {
+               "endpoints" : [
+                  {
+                     "endpointInfoFrames" : {
+                        "nonSecureNIF" : "100121"
+                     },
+                     "endpointId" : 0
+                  }
+               ],
+               "zwNodeData" : {
+                  "nodeId" : 4
+               },
+               "probeState" : {
+                  "state" : "RE-INTERVIEW"
+               }
+            },
+            "nodeUID" : {
+               "DSK" : "0x1234567890ABCDEF2234567890ABCDEF",
+               "uidType" : "DSK"
+            }
+         }
+      ],
+      "zwNetworkData" : {
+         "zwSecurity" : {
+            "ECDHPrivateKey" : "3232323245454545676767678989890132323232454545456767676789898901",
+            "S0key" : "9916FEDCBA1234561234567812345678",
+            "S2AuthenticatedKey" : "ABCDEF00876543211234567812345678",
+            "S2UnauthenticatedKey" : "FE6B48D74A435C8CEF0CE8E4127DF51D",
+            "S2AccessKey" : "123456789012345687654321ABCDEF01",
+            "S2AuthenticatedKeyLR": "4B6312E0422224B1E09598526506C91C",
+            "S2AccessKeyLR": "05E51115A6F72CDE7C18406745E74AE2"
+         }
+      }
+   }
+}

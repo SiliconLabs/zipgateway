@@ -1,0 +1,138 @@
+/** 
+\page backup_recover Z/IP Gateway Backup and Recover
+
+The Z/IP Gateway provides a backup and recover feature. With this feature it is possible to take 
+a snapshot of a running gateway and Z-Wave network and save the snapshot to a file. The file will 
+contain all information needed to recover the Z-Wave network and gateway state to the same or a new 
+gateway device. The state of a recovered Z/IP Gateway will be equivalent to the state of the gateway after a reboot.
+
+The gateway supports recovering a backup on same or newer gateway versions, as well
+as 700-series upgrade from older Z-Wave protocol and chip versions to newer versions.  This includes 500-series
+to 700-series migration. See the Z/IP GW Release Note for a list of supported versions.
+
+\note The backup file contains binary data files which are not portable between devices of different 
+architectures, e.g. a little-endian backup cannot be recovered on a big-endian system
+and vice versa. 
+
+While backing up, the gateway has to turn off the radio for approximately 20 seconds and stop
+LAN-side communication.  This is a good time window for the back-end to perform its backup.
+
+
+The script zgw_backup.sh is used to start the backup process in a running gateway.
+
+The script zgw_recover.sh is used to recover a backup on the same or new gateway device.
+
+
+\section sec-zgw-backup The Gateway Backup
+
+The gateway starts preparing for backup when it receives a signal from the zgw_backup.sh script.
+
+The backup may not start right 
+away, if the gateway is currently performing some operation. When the gateway returns to a state where
+the backup can be performed, the backup process is started. 
+
+The following operations will delay the backup process:
+
+- NetworkManagement (Add/Remove/Replace, etc.)
+- Node Probing
+- PowerLevel test
+- Emptying the mailbox or other queues
+
+\note If a backup is requested while the gateway is performing a COMMAND_CLASS_FIRMWARE_UPDATE operation or performing a 
+operation from COMMAND_CLASS_GATEWAY, the two operations may interfere. 
+
+Just before the actual backup starts, the gateway closes all open DTLS connections.  While backing up, the
+gateway will not answer to any new connections on the LAN side or send NACK waiting messages
+from the mailbox.  It will also turn off the radio.
+
+The gateway sends a signal to the zgw_backup.sh script when it starts
+the actual backup and another when the backup has completed.  The
+actual backup takes approximately 20 seconds.
+
+The following files are part of the gateway backup:
+- manifest, a meta-data file written by the gateway
+- nvm.json, a serialized copy of the controller NVM see \ref migration_running_zw_nvm_converter
+- zipgateway.cfg, configuration file used at time of backup
+- zipgateway.db, see \ref sec_database
+- provisioning list data files
+- portal certificate files
+
+The backup is stored as a zip-compressed file.
+
+\warning The nvm.json inside the backup contains the Z-Wave network keys in clear text.
+It is essential to keep the gateway backup safe from misuse.
+
+
+\subsection running_zgw_backup Running the Backup Script
+
+The backup script has the following signature:
+
+\verbatim
+Usage: zgw_backup.sh -b <backupfile> [-p <pid>]
+   -b <backupfile>      : ZIP file containing a gateway backup file.
+   -p <pid>             : PID of gateway
+\endverbatim
+
+The backupfile is a required parameter; this is the name of the backup zipfile to create. The backupfile parameter 
+must point to a writable part of the filesystem. zgw_backup.sh must be run with the same user
+permissions as the gateway itself, e.g., root-permissions.
+
+The pid parameter is an optional parameter. If only one gateway process is running on the system,
+the script can auto-detect the PID.  If multiple gateways are running on the
+system the pid parameter must be supplied.
+
+The script returns 0 if the backup was successful, otherwise it returns non-zero.
+
+
+\section sec-zgw-recover The Recover Process
+
+To perform a recovery, the gateway process must not be running.
+
+The recovery script will not modify the controller firmware of the Z-Wave module. If the controller 
+needs to be updated, this must be done before running recovery, using the zw_programmer tool.
+
+The recovery process copies the backed-up gateway files from the backup to the locations listed in the
+manifest file found in the backup.
+If recovery is attempted
+on a system that has a different file-system layout than the original system, the manifest file must be
+manually updated.
+
+Similarly, the zipgateway.cfg file stored in the backup must be updated if the name of the serial port
+device has changed from the old system to
+the new system, or if the new controller is a 700-series controller, which requires RFRegion to be set in
+the zipgateway.cfg file.
+
+When the recover process is completed, the gateway may be started.
+
+
+\subsection running_zgw_recover Running the Recover Script
+
+The recover script has the following signature:
+
+\verbatim
+Usage: zgw_recover.sh -s <serial dev> -b <target_firmware>
+   -s <serial dev>      : device file to which the Z-Wave controller is attached, defaults to the setting in zipgateway.cfg
+   -b <backupfile>      : ZIP file containing a gateway backup file.
+\endverbatim
+
+The backupfile is a required parameter; this is the name of the backup zipfile to use. 
+zgw_recover.sh must be run with the same user permissions as the gateway itself, e.g., root-permissions.
+
+The serial dev is optional, but default to the serial port given is zipgateway.cfg before running the recovery.
+
+The recover script will abort if it detects that a gateway process is currently running.
+
+Once the recover script has verified connectivity to the Z-Wave module as well as the integrity of the 
+backup file, the script will copy the backup artifacts from the ZIP file into their original locations.
+The file locations are read from the manifest file inside the backup ZIP file.
+
+Finally the script will overwrite the NVM of the Z-Wave module with the backup.
+
+\warning It may be necessary to perform a network reset of the target controller before restoring.
+
+The script will return 0 if the recover was successful, otherwise it will return non-zero.
+
+*/
+
+
+

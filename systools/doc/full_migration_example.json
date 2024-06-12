@@ -1,0 +1,353 @@
+{
+  "ZGWBackupInfo": {
+    "versionMinor": 0,
+    "versionMajor": 1,
+    "sourceChipType": 7,
+    "sourceZGWVersion": "7.14.00",
+    "sourceProtocolVersion": "6.82.01"
+  },
+  "zgw": {
+    "nodeList": [
+      {
+        "nodeUID": {
+          "uidType": "ZW Net ID",
+          "nodeId": 1,
+          "homeId": "0xDC3D51BA"
+        },
+        "zgwZWNodeData": {
+          "endpoints": [
+            {
+              "endpointId": 0,
+              "supportedCCs": {
+                "secureNIF": "5f4d523467787a6169",
+                "nonSecureNIF": "02075e5556229f9858748673726c878a8f"
+              },
+              "userIcon": 1280,
+              "installerIcon": 1280,
+              "epMDNSData": {
+                "name": "gateway",
+                "location": ""
+              }
+            }
+          ],
+          "probeState": {
+            "state": "DONE",
+            "versionCap": "07",
+            "ccVersions": [
+              {
+                "commandClassId": 134,
+                "version": 1
+              },
+              {
+                "commandClassId": 94,
+                "version": 1
+              },
+              {
+                "commandClassId": 114,
+                "version": 1
+              },
+              {
+                "commandClassId": 133,
+                "version": 1
+              },
+              {
+                "commandClassId": 122,
+                "version": 1
+              },
+              {
+                "commandClassId": 115,
+                "version": 1
+              },
+              {
+                "commandClassId": 34,
+                "version": 1
+              },
+              {
+                "commandClassId": 89,
+                "version": 1
+              },
+              {
+                "commandClassId": 86,
+                "version": 1
+              },
+              {
+                "commandClassId": 90,
+                "version": 1
+              },
+              {
+                "commandClassId": 108,
+                "version": 1
+              },
+              {
+                "commandClassId": 85,
+                "version": 1
+              },
+              {
+                "commandClassId": 116,
+                "version": 1
+              },
+              {
+                "commandClassId": 152,
+                "version": 1
+              },
+              {
+                "commandClassId": 159,
+                "version": 1
+              }
+            ]
+          },
+          "liveness": {
+            "wakeupInterval": 4200,
+            "livenessState": "OK"
+          },
+          "nodeProdId": {
+            "manufacturerId": 1,
+            "productType": 1,
+            "productId": 2
+          },
+          "grantedKeys": 113,
+          "mode": "MODE_ALWAYSLISTENING"
+        },
+        "ipData": {
+          "mDNSNodeName": "test01"
+        }
+      },
+      {
+        "nodeUID": {
+          "uidType": "DSK",
+          "DSK": "QR:34028-23669-20938-46346-33746-07431-56821-14553"
+        },
+        "zgwZWNodeData": {
+          "endpoints": [
+            {
+              "endpointId": 0,
+              "supportedCCs": {
+                "secureNIF": "85735a862084803071",
+                "nonSecureNIF": "0701726c555e989f8f"
+              },
+              "userIcon": 768,
+              "installerIcon": 768,
+              "epMDNSData": {
+                "name": "Notification Sensor",
+                "location": "My Sensor Location"
+              }
+            }
+          ],
+          "probeState": {
+            "state": "DONE",
+            "versionCap": "03",
+            "ccVersions": [
+              {
+                "commandClassId": 134,
+                "version": 3
+              },
+              {
+                "commandClassId": 94,
+                "version": 4
+              },
+              {
+                "commandClassId": 114,
+                "version": 4
+              },
+              {
+                "commandClassId": 132,
+                "version": 4
+              },
+              {
+                "commandClassId": 133,
+                "version": 4
+              }
+            ]
+          },
+          "liveness": {
+            "wakeupInterval": 4200,
+            "livenessState": "OK",
+            "lastUpdate": 0,
+            "lastAwake": 0
+          },
+          "nodeProdId": {
+            "manufacturerId": 0,
+            "productType": 3,
+            "productId": 3
+          },
+          "grantedKeys": 113,
+          "zwNodeData": {
+            "nodeId": 2
+          },
+          "mode": "MODE_FREQUENTLYLISTENING"
+        },
+        "ipData": {
+          "mDNSNodeName": "test02"
+        }
+      },
+      {
+        "nodeUID": {
+          "uidType": "DSK",
+          "DSK": "QR:12345-23669-20938-46346-33746-07431-56821-54321"
+        },
+        "zgwZWNodeData": {
+          "endpoints": [
+            {
+              "endpointId": 0,
+              "supportedCCs": {
+                "secureNIF": "85735a86202725",
+                "nonSecureNIF": "1001726c555e989f"
+              },
+              "userIcon": 1792,
+              "installerIcon": 1792,
+              "epMDNSData": {
+                "name": "Binary Switch OnOff",
+                "location": "Hiding in the corner"
+              }
+            }
+          ],
+          "probeState": {
+            "state": "DONE",
+            "versionCap": "10",
+            "ccVersions": [
+              {
+                "commandClassId": 134,
+                "version": 2
+              },
+              {
+                "commandClassId": 94,
+                "version": 2
+              },
+              {
+                "commandClassId": 114,
+                "version": 2
+              },
+              {
+                "commandClassId": 133,
+                "version": 2
+              },
+              {
+                "commandClassId": 142,
+                "version": 3
+              }
+            ]
+          },
+          "liveness": {
+            "wakeupInterval": 0,
+            "livenessState": "OK",
+            "lastUpdate": 0,
+            "lastAwake": 0
+          },
+          "nodeProdId": {
+            "manufacturerId": 3,
+            "productType": 2,
+            "productId": 0
+          },
+          "grantedKeys": 113,
+          "zwNodeData": {
+            "nodeId": 3
+          },
+          "mode": "MODE_ALWAYSLISTENING"
+        },
+        "ipData": {
+          "mDNSNodeName": "Switch"
+        }
+      },
+      {
+        "nodeUID": {
+          "uidType": "DSK",
+          "DSK": "QR:11111-22222-33333-44444-55555-66666-77777-88888"
+        },
+        "zgwZWNodeData": {
+          "endpoints": [
+            {
+              "endpointId": 0,
+              "supportedCCs": {
+                "secureNIF": "85735a8620608e26",
+                "nonSecureNIF": "1801726c555e989f"
+              },
+              "userIcon": 1792,
+              "installerIcon": 1792,
+              "epMDNSData": {
+                "name": "WallController",
+                "location": "my location"
+              }
+            },
+            {
+              "endpointId": 1,
+              "supportedCCs": {
+                "secureNIF": "5e25858e5986725a737a",
+                "nonSecureNIF": "10005e98"
+              },
+              "userIcon": 1792,
+              "installerIcon": 1792,
+              "epMDNSData": {
+                "name": "test endPoint1",
+                "location": "location1"
+              }
+            },
+            {
+              "endpointId": 2,
+              "supportedCCs": {
+                "secureNIF": "5e25858e5986725a737a",
+                "nonSecureNIF": "10005e98"
+              },
+              "userIcon": 1792,
+              "installerIcon": 1792,
+              "epMDNSData": {
+                "name": "test endPoint2",
+                "location": "location2"
+              }
+            },
+            {
+              "endpointId": 3,
+              "supportedCCs": {
+                "secureNIF": "5e25858e5986725a737a",
+                "nonSecureNIF": "10005e98"
+              },
+              "userIcon": 0,
+              "installerIcon": 0,
+              "epMDNSData": {
+                "name": "test endPoint3",
+                "location": "location3"
+              }
+            }
+          ],
+          "probeState": {
+            "state": "DONE",
+            "versionCap": "03",
+            "ccVersions": []
+          },
+          "liveness": {
+            "wakeupInterval": 0,
+            "livenessState": "OK",
+            "lastUpdate": 0,
+            "lastAwake": 0
+          },
+          "nodeProdId": {
+            "manufacturerId": 0,
+            "productType": 3,
+            "productId": 3
+          },
+          "grantedKeys": 113,
+          "zwNodeData": {
+            "nodeId": 4
+          },
+          "mode": "MODE_MAILBOX"
+        },
+        "ipData": {
+          "mDNSNodeName": ""
+        }
+      }
+    ],
+    "zwNetworkData": {
+      "zwSecurity": {
+        "ECDHPrivateKey": "72C45C7F09354D35F1B18A6CCD2B9330784E480A087B2F8C6AA3E7A1BAE012B3",
+        "S0key": "1B622B68B0566E60CF648B1FF7F0A54A",
+        "S2UnauthenticatedKey": "26F9B51D41EB5FE84A89CD077A0C4F23",
+        "S2AuthenticatedKey": "1ECC54724D30DD3049E40854B37DB01F",
+        "S2AccessKey": "6C7B9428CDD14DB41BA94928CB7A90D1",
+        "S2AuthenticatedKeyLR": "4B6312E0422224B1E09598526506C91C",
+        "S2AccessKeyLR": "05E51115A6F72CDE7C18406745E74AE2"
+      }
+    },
+    "zgwTemporaryAssociationData": {
+          "virtualNodeList": [6, 7, 8, 9]
+    }
+  }
+}

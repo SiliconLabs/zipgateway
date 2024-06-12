@@ -1,0 +1,11 @@
+
+case "$1" in
+  up)
+    ifconfig $TUNDEV up
+    brctl addif br-lan $TUNDEV
+    ip -6 route add $HANPREFIX via $LANIP
+    ;;
+  down)
+    ip -6 route del $HANPREFIX via $LANIP
+    ;;
+esac

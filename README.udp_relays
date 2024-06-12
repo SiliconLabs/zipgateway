@@ -1,0 +1,52 @@
+IPV6 udp relay:
+===============
+
+Name:
+udp_redirect_pcap_ipv6.c
+
+Build: 
+# gcc udp_redirect_pcap_ipv6.c -lpcap -o udp_redirect_pcap_ipv6
+
+Run:
+# ./udp_redirect_pcap_ipv6 &
+
+
+IPV4 udp relay:
+===============
+Getting IPV4 broadcast discovery to work
+
+1. Download UDP Broadcast Packet Relay https://www.joachim-breitner.de/udp-broadcast-relay/
+
+git clone https://github.com/nomeata/udp-broadcast-relay.git
+
+2. Do following change
+
+diff --git a/main.c b/main.c
+index f3df27b..cd582bf 100644
+--- a/main.c
++++ b/main.c
+@@ -241,11 +241,13 @@ int main(int argc,char **argv)
+                        exit(1);
+                }
+ 
++#if 0
+                /* Save the address for later use */
+                bcopy(  (struct sockaddr_in *)&reqbuf.ifr_addr,
+                        &ifs[maxifs].dstaddr,
+                        sizeof(struct sockaddr_in) );
+-
++#endif
++        ifs[maxifs].dstaddr.sin_addr.s_addr = inet_addr("255.255.255.255");
+                DPRINT("%s: %i / %s\n",
+                        reqbuf.ifr_name,
+                        ifs[maxifs].ifindex,
+
+3. Set the compiler and then Make
+
+make
+
+4. Start it as follows. Following command makes udp-broadcast relay to listen on port 4123 where we send out ipv4 discovery brodcast packet and then udp-broadcast-relay just forwards it to tap0
+
+./udp-broadcast-relay -f 4123 tap0
+
+

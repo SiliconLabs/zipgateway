@@ -1,0 +1,162 @@
+{
+   "ZGWBackupInfo" : {
+      "versionMinor" : 0,
+      "versionMajor" : 1,
+      "sourceChipType" : 5,
+      "sourceZGWVersion" : "2.61.01",
+      "sourceProtocolVersion" : "6.71.05"
+   },
+   "zgw" : {
+      "nodeList" : [
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 1,
+               "homeId" : "0xEB71529E"
+            },
+            "zgwZWNodeData" : {
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "86727359857a",
+                        "nonSecureNIF" : "10015e86727a7322855970565a6c557a74989f"
+                     }
+                  }
+               ],
+               "probeState" : {
+                  "state" : "DONE"
+               },
+               "nodeProdId" : {
+                  "manufacturerId" : 1,
+                  "productType" : 1,
+                  "productId" : 2
+               },
+               "grantedKeys" : 113
+            }
+         },
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 2,
+               "homeId" : "0xEB71529E"
+            },
+            "zgwZWNodeData" : {
+               "nodeProdId" : {
+                  "manufacturerId" : 0,
+                  "productId" : 3,
+                  "productType" : 3
+               },
+               "grantedKeys" : 1,
+               "probeState" : {
+                  "state" : "DONE"
+               },
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "86858e59725a738071847a",
+                        "nonSecureNIF" : "10015e98"
+                     }
+                  }
+               ],
+               "zwNodeData" : {
+                  "nodeId" :2
+               }
+            }
+         },
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 3,
+               "homeId" : "0xEB71529E"
+            },
+            "zgwZWNodeData" : {
+               "nodeProdId" : {
+                  "productId" : 2,
+                  "manufacturerId" : 0,
+                  "productType" : 3
+               },
+               "grantedKeys" : 0,
+               "probeState" : {
+                  "state" : "DONE"
+               },
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "",
+                        "nonSecureNIF" : "10015e25858e5986725a737a"
+                     }
+                  }
+               ],
+               "zwNodeData" : {
+                  "nodeId" :3
+               }
+            }
+         },
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 4,
+               "homeId" : "0xEB71529E"
+            },
+            "zgwZWNodeData" : {
+               "nodeProdId" : {
+                  "productId" : 11,
+                  "manufacturerId" : 0,
+                  "productType" : 3
+               },
+               "grantedKeys" : 1,
+               "probeState" : {
+                  "state" : "DONE"
+               },
+               "endpoints" : [
+                  {
+                     "endpointId" : 0,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "2526858e597186725a73607a",
+                        "nonSecureNIF" : "10015e98"
+                     }
+                  },
+                  {
+                     "endpointId" : 1,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "2585898e71",
+                        "nonSecureNIF" : "10015e98"
+                     }
+                  },
+                  {
+                     "endpointId" : 2,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "2585598e71",
+                        "nonSecureNIF" : "10015e98"
+                     }
+                  },
+                  {
+                     "endpointId" : 3,
+                     "endpointInfoFrames" : {
+                        "secureNIF" : "2685598e71",
+                        "nonSecureNIF" : "10015e98"
+                     }
+                  }
+               ],
+               "zwNodeData" : {
+                  "nodeId" :4
+               }
+            }
+         }
+      ],
+      "zwNetworkData" : {
+         "zwSecurity" : {
+            "ECDHPrivateKey" : "96692519F44AA1265E9142D63F9DB4FEDE83EC88D9EB0A35278F91C66293A688",
+            "S0key" : "1C49CBAD3A05266DC47B8FAA61813171",
+            "S2UnauthenticatedKey" : "B14978C8AABE2CF3F4BBBC57606D2403",
+            "S2AuthenticatedKey" : "8BB41D5ECFC8AB45E152E09222941F1B",
+            "S2AccessKey" : "A0B0A0649C3EF4042DE28D0A843F7AD7",
+            "S2AuthenticatedKeyLR": "4B6312E0422224B1E09598526506C91C",
+            "S2AccessKeyLR": "05E51115A6F72CDE7C18406745E74AE2"
+         }
+      }
+   }
+}

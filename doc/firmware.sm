@@ -1,0 +1,58 @@
+%{
+//
+// Copyright (c) 2005 Acme, Inc.
+// All rights reserved.
+//
+// Acme - a name you can trust!
+//
+// Author: Wil E. Coyote (Hungericus Vulgarus)
+//
+%}
+
+// This FSM works for the Task class only and only the Task
+// class may instantiate it.
+%class Firmware
+%fsmclass FirmwareFSM
+%access package
+
+%start FirmwareFSM::Idle
+%map FirmwareFSM
+%%
+Idle
+{
+	Request_Get() [id_ok]  GetFragment {}
+	Request_Get() [!id_ok] Idle { SendRequestReport(BAD_ID); }
+		
+	Prepare_Get() [id_ok]  SendFragments{}
+	Prepare_Get() [!id_ok] Idle { SendPrepareReport(BAD_ID); }
+}
+
+
+GetFragment
+{
+	Timeout() Idle { SendStatus(FAIL); }
+	RxReport() [last_report] ApplyFirmware {}	
+	RxReport() GetFragment { }
+}
+ 
+ApplyFirmware
+{
+	BurnDone() Idle { SendStatus(OK); }
+}
+
+SendFragments
+{
+	Frag_Get() SendingFragment {  SendFragment(); }
+		
+	Timeout()
+		Idle{ SendStatus(FAIL); }
+		
+	Rx_Status()
+		Idle{ }
+}		
+
+SendingFragment
+{
+	SendDone() SendFragments {}
+}
+%%

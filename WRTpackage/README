@@ -1,0 +1,29 @@
+
+Building the toolchain 
+
+Download latest sources of OpenWRT: 
+
+mkdir openwrt 
+cd openwrt 
+svn co svn://svn.openwrt.org/openwrt/trunk/ trunk/   (substitute with branches/VERSION if so desired) 
+cd trunk 
+scripts/feeds update/.
+scripts/feeds install -a
+
+
+Copy the Z/IP Router sources from the DevKit to OpenWRT package directory.
+
+cd package/ 
+cp -r  ${DevKit}/ZIP_Router3/WRTpackage  ziprouter3
+cd ziprouter3
+ln -s ${DevKit}/ZIP_Router3/ src
+
+Setup openWRT
+
+cd ../../
+ln -s ${DevKit}/ZIP_Router3/WRTpackage/BUFFALO.config .config
+make menuconfig
+
+
+Build OpenWRT
+make

@@ -1,0 +1,42 @@
+/**
+\defgroup processes Z/IP Gateway processes
+All contiki  processes used by the Z/IP Gateway.
+
+\defgroup transport Z-Wave transport related wrappers
+These modules handle Z-Wave transport related functions such as Transport server, security, CRC16 and
+Multichannel encapsulation.
+
+
+\defgroup CMD_handler Command Handlers
+These modules contain the command handlers for the various commands supported
+by the Z/IP Gateway.
+
+\defgroup contiki The Contiki RTOS
+@{
+
+  \defgroup pt Protothreads
+  
+  \defgroup sys System
+  
+  \defgroup lib Library
+  
+  \defgroup mem Memory
+  
+  \defgroup dev Device
+  
+  \defgroup rime Rime
+  
+  \defgroup sicslowpan 6LoWPAN implementation
+  
+  \defgroup uip	uIP 
+  
+  \defgroup slip Slip
+  
+  \defgroup uip6 IPv4 stack
+  
+  \defgroup uipfw uIP packet forwarding
+  
+@}
+
+
+*/

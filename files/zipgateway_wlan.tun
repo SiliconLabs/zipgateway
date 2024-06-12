@@ -1,0 +1,64 @@
+#!/bin/sh
+
+WLAN=wlan0
+case "$1" in
+ up)
+   ifconfig $TUNDEV | grep "\s*UP" > /dev/null || {
+     ifconfig $TUNDEV up
+   }
+   #brctl addif br-lan $TUNDEV
+   sh -c "while true;
+           do
+              pidof zipgateway || break;
+              ip -6 route del $HANPREFIX via $LANIP > /dev/null 2>&1
+              ip -6 route add $HANPREFIX via $LANIP > /dev/null 2>&1
+              if [ \$? -eq 2 ]; then
+                   sleep 5;
+                   continue;
+              else
+                   break;
+              fi;
+            done;" &
+
+   ifconfig $WLAN > /dev/null 2>&1 && {
+      ifconfig $TUNDEV promisc
+      sysctl -w net.ipv4.ip_forward=1
+      sysctl -w net.ipv6.conf.$TUNDEV.accept_ra=2
+      TAP0=$(grep "^[[:space:]]*ZipLanGw6*" /usr/local/etc/zipgateway.cfg |awk '{ gsub (" ", "", $0); print}'|sed 's/ZipLanGw6=//')
+      ip -6 addr add $TAP0 dev $TUNDEV
+      pidof parprouted > /dev/null 2>&1 || {
+          /usr/sbin/parprouted $WLAN $TUNDEV
+      }
+      while true;
+      do
+          IPADDR=$(/sbin/ip addr show $WLAN | perl -wne 'm|^\s+inet (.*)/| && print $1')
+          if [ -n "$IPADDR" ]; then
+             /sbin/ip addr add $IPADDR/32 dev $TUNDEV
+		     echo "Configured $TUNDEV to have same IP as $WLAN"
+             break
+          else
+             echo "$WLAN does not have IP assigned. Retrying to add IP to $TUNDEV in 5 seconds"
+             sleep 5
+             continue
+          fi
+      done;
+   }
+
+   pidof udprelay > /dev/null 2>&1 && {
+        killall -SIGKILL udprelay
+   }
+
+   udprelay -i $TUNDEV -b $WLAN -4 4123 -6 4123 -4 5353 -6 5353 &
+   udprelay -i $WLAN -b $TUNDEV -4 5353 -6 5353 &
+   pidof udprelay > /dev/null 2>&1 || {
+      echo "UDP Relay could not be started. ZIP Discovery and MDNS will not work"
+   }
+   exit 0
+   ;;
+ down)
+   ip -6 route del $HANPREFIX via $LANIP
+   ifconfig $TUNDEV down
+   #brctl delif br-lan $TUNDEV
+   killall -SIGKILL /usr/sbin/parprouted
+   ;;
+esac

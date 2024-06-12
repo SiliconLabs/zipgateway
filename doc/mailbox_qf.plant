@@ -1,0 +1,17 @@
+@startuml
+title "Mailbox proxy Queue full frame flow."
+actor "Z/IP Client" as zclient 
+participant "Mailbox Proxy" as proxy
+participant "Non-Listening Node" as node
+database "Mailbox Service" as proxyservice
+ 
+zclient --> proxy : Meter Get
+proxy -> node : Meter Get
+...200ms Later...
+proxy --> zclient : NACK Waiting
+node -> proxy : NACK
+proxy --> proxyservice : Queue Push| Origianl IP | Meter Get
+proxyservice --> proxy : ACK
+proxyservice --> proxy : Queue Full| Origianl IP | Meter Get
+proxy --> zclient : NACK Queue Full
+@enduml

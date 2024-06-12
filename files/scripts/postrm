@@ -1,0 +1,44 @@
+#!/bin/sh -e
+set -e
+
+# It is possible that Debconf has already been removed, too.
+if [ -e /usr/share/debconf/confmodule ]; then
+  . /usr/share/debconf/confmodule
+fi
+
+#echo postrm
+#echo ${1}
+# (normally) Automatically added by dh_installdebconf
+if [ "$1" = purge ]; then
+    db_purge
+fi
+
+echo "removing br-lan from netplan"
+if [ -f /etc/netplan/br-lan.yaml ]
+then
+    rm /etc/netplan/br-lan.yaml 
+fi
+
+#echo "removing br-lan"
+if [ -f /etc/network/interfaces.d/br-lan ]
+then
+    rm /etc/network/interfaces.d/br-lan
+fi
+#echo "remvoing sysctl"
+if [ -f /etc/sysctl.d/30-zgwifi.conf ]
+then
+    rm /etc/sysctl.d/30-zgwifi.conf
+fi
+if [ -f /etc/sysctl.d/30-tap0.conf ]
+then
+    rm /etc/sysctl.d/30-tap0.conf
+fi
+if [ -f /etc/dhcpcd.conf ]
+then
+    sed -i "/interface tap0 #Added by zipgateway.*/d" /etc/dhcpcd.conf
+    sed -i "/interface br-lan #Added by zipgateway.*/d" /etc/dhcpcd.conf
+    sed -i "/noipv6 #Added by zipgateway.*/d" /etc/dhcpcd.conf
+    /etc/init.d/dhcpcd restart
+fi
+
+

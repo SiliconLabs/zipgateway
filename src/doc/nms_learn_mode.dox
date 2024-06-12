@@ -1,0 +1,188 @@
+/**
+ * \defgroup nms Network Management State Machines
+ * \ingroup NW_CMD_handler
+ *
+\brief Drawings of State Machines in Network Management
+*
+*
+* \section nms-draw State Machines in Network Management
+ *
+ * The state machines in Network Management are mutually exclusive.
+ */
+
+/**
+ * \addtogroup nms
+ *
+ * \brief State Machine for Gateway Learn Mode
+ *
+ * \subsection nms-draw-learn State Machine for Gateway Learn Mode
+ *
+ *
+ * Reading guide:
+ *
+ * Dashed transitions are asynchronous, solid are synchronous.
+ *
+ * Transitions can be asynchronous in three ways: Event exchanges with
+ * contiki processes, callbacks from network communications or timeouts
+ * (which are also callbacks in contiki).
+ *
+ * Client ("user") events are dark green.
+ *
+ * Timeouts are red.
+ *
+ * Protocol callbacks are blue.
+ *
+ * Security callbacks are cyan.
+ *
+ * LM-cb abbreviates "LearnModeState callback".
+ *
+ * RS-cb abbreviates "ResetState callback".
+ *
+ * NM_StatusUpdate abbreviates NetworkManagement_NetworkUpdateStatusUpdate.
+ *
+ * Note that some of the callback functions are also called
+ * synchronously if a communication or a resource allocation
+ * fails.  E.g., ZW_SendDataAppl() will call ResetState() directly if it
+ * fails to queue up a reply to client.
+ *
+ * Black states are handled in the main \ref nm_fsm_post_event() function.
+ *
+ * Green states are substates handled in the \ref LearnModeStatus()
+ * callback function.  This function handles the interaction with the
+ * protocol.  Transitions that are possible in the code, but not actually
+ * possible in the protocol, are omitted from the diagram.
+ *
+ * Red states are handled by triggering \ref ResetState() from different external components.
+ *
+ *
+\dot "Network Management State Machine for Learn Mode."
+digraph nms {
+        size="12,18"
+        ratio=1.5
+
+        NM_IDLE [color="", label="IDLE\nMyId=n\nIPv4=addr4", URL="\ref NM_IDLE", penwidth=2]
+        NM_LEARN_MODE_C [color=green, label="LEARN_MODE\n(classic)\nMyId=n\nIPv4=addr4", URL="\ref NM_LEARN_MODE"]
+        NM_LEARN_MODE_NWI [color=green, label="LEARN_MODE\n(NWI)\nMyId=n\nIPv4=addr4", URL="\ref NM_LEARN_MODE"]
+        NM_LM_STARTED [color=green, label="LEARN_MODE_STARTED\nMyId=0\nIPv4=??", URL="\ref NM_LEARN_MODE_STARTED"]
+        NM_LM_REPLYING [color=red3, label="LEARN_MODE\nDisable\nMyId=n\nIPv4=addr4", URL="\ref NM_LEARN_MODE"]
+        NM_LM_STARTED_REPLYING [color=red3, label="LEARN_MODE_STARTED\nFailed\nMyId=0\nIPv4=??", URL="\ref NM_LEARN_MODE_STARTED"]
+        NM_WAIT_FOR_SECURE_LEARN [color=black, label="\nWAIT_FOR_SECURE_LEARN\n.\n", URL="\ref NM_WAIT_FOR_SECURE_LEARN"]
+        NM_WAIT_FOR_MDNS [color=black, label="WAIT_FOR_MDNS\ninclusion", URL="\ref NM_WAIT_FOR_MDNS"]
+        NM_WAIT_FOR_MDNS_excl [color=black, label="WAIT_FOR_MDNS\nexclusion/replication/ctrl shift", URL="\ref NM_WAIT_FOR_MDNS"]
+        NM_WAITING_FOR_PROBE [color=red3, label="WAITING_FOR_PROBE", URL="\ref NM_WAITING_FOR_PROBE"]
+        NM_WAIT_FOR_PROBE_BY_SIS [color=black, label="WAIT_FOR_PROBE_BY_SIS", URL="\ref NM_WAIT_FOR_PROBE_BY_SIS"]
+        NM_WAIT_FOR_OUR_PROBE [color=black, label="WAIT_FOR_OUR_PROBE", URL="\ref NM_WAIT_FOR_OUR_PROBE"]
+        NM_SET_DEFAULT [color=black, label=SET_DEFAULT, URL="\ref NM_SET_DEFAULT"]
+
+        LM_NEW_TEST [shape=diamond, label="LEARN_MODE_NEW?"]
+
+
+        edge [label="User:\nSET_LEARN_MODE\n(NWI)", color=darkgreen, style=solid, penwidth=2]
+        NM_IDLE -> NM_LEARN_MODE_C;
+
+        edge [label="LM-cb(LM_STARTED)\nLock probe",
+             color=blue, fontcolor=blue, style=dashed,
+             URL="\ref LearnModeStatus()"]
+        {NM_LEARN_MODE_C, NM_LEARN_MODE_NWI} -> NM_LM_STARTED;
+
+        edge [label="LM-cb(LM_DONE)", style=dashed,
+             URL="\ref LearnModeStatus()"]
+        NM_LM_STARTED-> NM_WAIT_FOR_SECURE_LEARN;
+// This cannot actually happen in the protocol:
+//        {NM_LEARN_MODE_C, NM_LEARN_MODE_NWI, NM_LM_STARTED}-> NM_WAIT_FOR_SECURE_LEARN;
+
+        // exclusion
+        edge [label="bSource==0\nor clean network\n(aka exclusion)\nSimulate\nSECURITY_DONE",
+             color=black, fontcolor=black, style=solid]
+        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_MDNS_excl;
+        edge [label=""]
+        NM_WAIT_FOR_MDNS_excl -> NM_SET_DEFAULT;
+        edge [label="MDNS_EXIT\nUnlock probe", color=black, style=dashed,
+              URL="\ref NM_EV_MDNS_EXIT"]
+        NM_SET_DEFAULT -> NM_WAITING_FOR_PROBE;
+
+        // replication
+        edge [label="bSource!=0\nand not clean network\nand not new network\n(replication or ctrl shift)\nSimulate\nSECURITY_DONE", 
+             color=black, style=solid]
+        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_MDNS;
+
+        edge [label="LM-cb(LM_FAILED)\nUnlock probe", color=blue, fontcolor=blue,style=dashed, URL="\ref LearnModeStatus()"]
+        {NM_LEARN_MODE_C, NM_LEARN_MODE_NWI} -> NM_LM_REPLYING;
+        NM_LM_STARTED -> NM_LM_STARTED_REPLYING;
+
+        edge [label="LM TIMEOUT\n1st", style=dashed, color=red3, fontcolor=red3]
+        NM_LEARN_MODE_C -> NM_LEARN_MODE_NWI;
+
+        edge [label="LM TIMEOUT\n2nd-4th", style=dashed, color=red3]
+        NM_LEARN_MODE_NWI -> NM_LEARN_MODE_NWI;
+
+        edge [label="LM TIMEOUT\n5th", style=dashed, color=red3]
+        NM_LEARN_MODE_NWI -> NM_LM_REPLYING;
+
+        edge [label="LM TIMEOUT", style=dashed, color=red3]
+        NM_LM_REPLYING -> NM_LM_REPLYING;
+
+        edge [label="User:\nLM_DISABLED", color=darkgreen, style=dashed, fontcolor=darkgreen]
+        {NM_LEARN_MODE_C, NM_LEARN_MODE_NWI} -> NM_LM_REPLYING;
+
+// This just becomes unreadable
+//        edge [label="User:\nLM_DISABLED\nAbort S2", color=darkgreen, style=dashed, fontcolor=darkgreen]
+//        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_SECURE_LEARN;
+
+        edge [label="Reply\nfails\nRS-cb()",
+              style=solid, penwidth=2, color=black, fontcolor=black,
+              URL="\ref ResetState()"]
+        NM_LM_REPLYING -> NM_IDLE;
+        NM_LM_STARTED_REPLYING -> NM_IDLE;
+
+        edge [label="RS-cb() from\nzwave_send()",
+              penwidth=2, style="dashed", color=black,
+              URL="\ref ResetState()"]
+        NM_LM_REPLYING -> NM_IDLE;
+        NM_LM_STARTED_REPLYING -> NM_IDLE;
+
+//        edge [label="DTLS timeout or\nS2 incl_timeout\n (60s)?"]
+//        NM_LM_STARTED_REPLYING -> NM_IDLE;
+
+        edge [label="S0_STARTED\nAbort S2", color=cyan4, fontcolor=cyan4, style=dashed, pensize=2,
+              URL="\ref NM_EV_S0_STARTED"]
+        NM_LM_STARTED -> NM_LM_STARTED;
+        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_SECURE_LEARN;
+
+        edge [label=ADD_SECURITY_KEY_CHALLENGE, color=cyan4, fontcolor=cyan4,
+              URL="\ref NM_EV_ADD_SECURITY_KEY_CHALLENGE"]
+        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_SECURE_LEARN;
+
+        edge [label="SECURITY_DONE", style=dashed, penwidth=2, fontcolor=cyan4,
+              URL="\ref NM_EV_SECURITY_DONE", color=cyan4]
+        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_MDNS;
+
+        edge [label=MDNS_EXIT, style=dashed, color=black, fontcolor=black,
+              URL="\ref NM_EV_MDNS_EXIT"]
+        NM_WAIT_FOR_MDNS -> LM_NEW_TEST;
+        edge [label="yes\nstart 6s timer", style=solid]
+        LM_NEW_TEST -> NM_WAIT_FOR_PROBE_BY_SIS;
+        edge [label="no\nUnlock probe\nStart timer\nPOST: ZIP_EVENT_RESET"]
+        LM_NEW_TEST -> NM_WAITING_FOR_PROBE;
+
+        edge [label="TIMEOUT\nPOST: ZIP_EVENT_RESET", style=dashed, color=red3, fontcolor=red3]
+        NM_WAIT_FOR_PROBE_BY_SIS -> NM_WAIT_FOR_OUR_PROBE;
+
+        edge [label="FRAME_RECEIVED\n[restart 6s timer]", color=black, fontcolor=black,
+              URL="\ref NM_EV_FRAME_RECEIVED"]
+        NM_WAIT_FOR_PROBE_BY_SIS -> NM_WAIT_FOR_PROBE_BY_SIS;
+
+        edge [label="ALL_PROBED\nUnlock probe\nStart 65s timer", style=dashed, color=black,
+              URL="\ref NM_EV_ALL_PROBED"]
+        NM_WAIT_FOR_OUR_PROBE -> NM_WAITING_FOR_PROBE;
+
+        edge [label="TIMEOUT", style=dashed, color=red3, URL="\ref network_update_timeout()"]
+        edge [label="RS-cb from\nNM_StatusUpdate()", 
+              color=blue, fontcolor=blue,
+              URL="\ref NetworkManagement_NetworkUpdateStatusUpdate()"]
+        NM_WAITING_FOR_PROBE -> NM_IDLE
+}
+
+\enddot
+
+*/

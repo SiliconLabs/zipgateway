@@ -1,0 +1,105 @@
+#!/bin/sh
+
+#Setting following variable enables wireless configuration. Do not set/change manually.
+WLAN=
+ROUTING_PID=/var/run/zip-routing.pid
+PATH=$PATH:/usr/bin/:/usr/sbin:/usr/local/sbin/:
+BRIDGE_INT=br-lan
+
+if [ -f /etc/openwrt_release ]; then
+    BRIDGE_INT=br-zip
+fi
+
+case "$1" in
+  up)
+    ifconfig $TUNDEV | grep "\s*UP" > /dev/null || {
+      ifconfig $TUNDEV up
+    }
+    if [ -z "$WLAN" ]
+    then 
+      brctl addif $BRIDGE_INT $TUNDEV
+      ROUTE_DEV=$BRIDGE_INT
+    else
+      ROUTE_DEV=$TUNDEV
+    fi
+
+    if [ -f $ROUTING_PID ] && [ -d /proc/`cat $ROUTING_PID` ]
+    then
+      kill -9 `cat $ROUTING_PID `
+      rm $ROUTING_PID
+    fi
+
+    sh -c "while true;
+              do
+                 pidof zipgateway || break;
+                 ip -6 route del $HANPREFIX > /dev/null 2>&1
+                 ip -6 route add $HANPREFIX via $LANIP dev $ROUTE_DEV > /dev/null 2>&1
+                 if [ \$? -eq 2 ]; then
+                      sleep 5;
+                      continue;
+                 else
+                      break;
+                 fi;
+               done;" &
+
+    echo $! > $ROUTING_PID
+
+    if [ -n "$WLAN" ]; then
+        ifconfig $WLAN > /dev/null 2>&1 && {
+           ifconfig $WLAN promisc
+           ifconfig $TUNDEV promisc
+           sysctl -w net.ipv4.ip_forward=1
+           sysctl -w net.ipv6.conf.$TUNDEV.accept_ra=2
+           sysctl -w net.ipv6.conf.all.forwarding=1
+           echo 1 > /proc/sys/net/ipv4/conf/all/proxy_arp
+           TAP0=$(grep "^[[:space:]]*ZipLanGw6*" /usr/local/etc/zipgateway.cfg |awk '{ gsub (" ", "", $0); print}'|sed 's/ZipLanGw6=//')
+           ip -6 addr add $TAP0 dev $TUNDEV
+           pidof parprouted > /dev/null 2>&1 || {
+               parprouted $WLAN $TUNDEV
+           }
+           while true;
+           do
+               IPADDR=$(/sbin/ip -oneline -family inet addr show dev $WLAN | awk '{ print $4 }' | cut -d'/' -f 1 | head -1)
+               if [ -n "$IPADDR" ]; then
+                  /sbin/ip addr add $IPADDR/32 dev $TUNDEV
+                  if [ $? -ne 0 ]; then
+                      echo "Failure in assigning $IPADDR to $TUNDEV"
+                  else
+                      echo "Configured $TUNDEV to have ip addres: $IPADDR same as $WLAN"
+                  fi
+                  sysctl -w net.ipv6.conf.$WLAN.accept_ra=2
+                  break
+               else
+                  echo "$WLAN does not have IP assigned. Retrying to add IP to $TUNDEV in 5 seconds"
+                  sleep 5
+                  continue
+               fi
+           done;
+        }
+
+        pidof udprelay > /dev/null 2>&1 && {
+            killall -SIGKILL udprelay
+        }
+
+        udprelay -i $TUNDEV -b $WLAN -4 4123 -6 4123 -4 5353 -6 5353 -4 68 &
+        udprelay -i $WLAN -b $TUNDEV  -4 5353 -6 5353 -4 67 &
+
+        UDPRELAY_CNT=$(pidof udprelay |wc -w)
+         if [ "$UDPRELAY_CNT" -ne "2" ]; then
+            echo "UDP Relays could not be started. ZIP Discovery and MDNS browsing will not work"
+        fi
+
+    fi
+
+    #returning the result of the last command. TODO better to aggregate all the results
+    exit $!
+    ;;
+  down)
+    ip -6 route del $HANPREFIX via $LANIP
+    if [ -n "$WLAN" ]; then
+        killall -SIGKILL parprouted
+    else
+        brctl delif $BRIDGE_INT $TUNDEV
+    fi
+    ;;
+esac

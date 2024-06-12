@@ -1,0 +1,375 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Z-Wave Controller",
+  "description": "Z-Wave controller export/import schema",
+
+  "definitions": {
+    "uint8": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "uint8_nonzero": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255
+    },
+    "nodeId": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 232
+    },
+    "homeId": {
+      "oneOf": [
+        {
+          "comment": "Home ID as a hex number",
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^0[xX][0-9a-fA-F]{8}$"
+        },
+        {
+          "comment": "Home ID as a decimal number",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        }
+      ]
+    },
+    "versionString": {
+      "type": "string",
+      "pattern": "^[0-9]{1,2}\\.[0-9]{2}\\.[0-9]{2}$"
+    },
+    "powerLevel": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/definitions/uint8"
+      }
+    },
+    "routeCacheLine": {
+      "type": "object",
+      "properties": {
+        "routecacheLineConf": {
+          "description": "Bits 0-2 speed: 9600 (0x01), 40K (0x02), 100K (0x03), 200K (0x04). Bits 3-7 options bitflags: LOW_POWER (0x08), LONG_PREAMBLE (0x10), SEND_BEAM_250MS (0x20), SEND_BEAM_1000MS (0x40), BROADCAST_HOMEID (0x80)",
+          "$ref": "#/definitions/uint8"
+        },
+        "repeaters": {
+          "oneOf": [
+            {
+              "description": "Repeater nodes",
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "$ref": "#/definitions/nodeId"
+              }
+            },
+            {
+              "description": "Direct route indicated by first item being CACHED_ROUTE_LINE_DIRECT (0xFE)",
+              "type": "array",
+              "maxItems": 4,
+              "items": [
+                {
+                  "const": 254
+                }
+              ],
+              "additionalItems": {
+                "const": 0
+              }
+            }
+          ] 
+        }
+      },
+      "required": [
+        "routecacheLineConf",
+        "repeaters"
+      ]
+    }
+  },
+
+  "comment": "------- DOCUMENT STARTS HERE -------",
+
+  "type": "object",
+  "properties": {
+
+    "backupInfo": {
+      "description": "The Controller backup file information",
+      "type": "object",
+      "properties": {
+        "backupFormatVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sourceProtocolVersion": {
+          "$ref": "#/definitions/versionString"
+        },
+        "sourceAppVersion": {
+          "$ref": "#/definitions/versionString"
+        },
+        "date": {
+          "comment": "RFC 3339 date format",
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["backupFormatVersion", "sourceProtocolVersion", "sourceAppVersion"]
+    },
+
+
+    "zwController": {
+      "type": "object",
+      "properties": {
+
+        "ownHomeId": {
+          "description": "The network id to use if this is the primary controller (in this case the flag CONTROLLER_ON_OTHER_NETWORK (0x02) in controllerConfiguration IS NOT set). For a pre 700-series secondary controller, this will contain the original home id of the controller before it was included as a secondary controller in another network. For a 700-series controller ownHomeId and learnedHomeId will be identical.",
+          "$ref": "#/definitions/homeId"
+        },
+
+        "learnedHomeId": {
+          "description": "The network id to use if this is NOT the primary controller (in this case the flag CONTROLLER_ON_OTHER_NETWORK (0x02) in controllerConfiguration IS set). For a 700-series controller ownHomeId and learnedHomeId will be identical.",
+          "$ref": "#/definitions/homeId"
+        },
+
+        "nodeId": {
+          "description": "The controller node id if this is NOT the primary controller. A primary controller will always be configured as node id 1 (in which case this value will be ignored).",
+          "$ref": "#/definitions/nodeId"
+        },
+
+        "lastUsedNodeId": {
+          "description": "The most recently used node id. Controls what id to allocate next when adding new nodes.",
+          "$ref": "#/definitions/nodeId"
+        },
+
+        "staticControllerNodeId": {
+          "description": "...",
+          "$ref": "#/definitions/nodeId"
+        },
+
+        "controllerConfiguration": {
+          "description": "bitflags: CONTROLLER_IS_SECONDARY (0x01), CONTROLLER_ON_OTHER_NETWORK (0x02), CONTROLLER_NODEID_SERVER_PRESENT (0x04), CONTROLLER_IS_REAL_PRIMARY (0x08), CONTROLLER_IS_SUC (0x10), NO_NODES_INCUDED (0x20)",
+          "$ref": "#/definitions/uint8"
+        },
+
+        "systemState": {
+          "description": "Smart Start state. Defaults to Idle (0) if missing.",
+          "type": "integer",
+          "oneOf": [
+            { "const": 0, "description": "Idle" },
+            { "const": 1, "description": "Active" }
+          ]
+        },
+
+        "cmdClassList": {
+          "description": "NIF: UnSecureIncludedCC",
+          "type": "array",
+          "maxItems": 35,
+          "items": {
+            "$ref": "#/definitions/uint8"
+          }
+        },
+
+        "nodeTable": {
+          "description": "The node table defines all nodes in the network",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 232,
+          "items": {
+            "type": "object",
+            "properties": {
+              "nodeId": {
+                "$ref": "#/definitions/nodeId"
+              },
+              "virtualNode": {
+                "description": "true if this is a virtual node. Defaults to false if missing.",
+                "type": "boolean"
+              },
+              "pendingUpdate": {
+                "description": "true if the node information needs to be sent to the SUC. Defaults to false if missing.",
+                "type": "boolean"
+              },
+              "pendingDiscovery": {
+                "description": "true if the node range info needs to be updated. Defaults to false if missing.",
+                "type": "boolean"
+              },
+              "controllerSucUpdateIndex": {
+                "description": "Last SUC update index (1-64). If this node is not SUC then either 255 (SUC_OUT_OF_DATE) or 0",
+                "$ref": "#/definitions/uint8"
+              },
+              "neighbours": {
+                "description": "The nodes neigbours",
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/nodeId"
+                } 
+              },
+              "nodeInfo": {
+                "description": "Information obtained from the nodes info frame",
+                "type": "object",
+                "properties": {
+                  "capability": {
+                    "$ref": "#/definitions/uint8"
+                  },
+                  "security": {
+                    "$ref": "#/definitions/uint8"
+                  },
+                  "reserved": {
+                    "$ref": "#/definitions/uint8"
+                  },
+                  "generic": {
+                    "$ref": "#/definitions/uint8"
+                  },
+                  "specific": {
+                    "$ref": "#/definitions/uint8"
+                  }
+                }
+              },
+              "routeCache": {
+                "type": "object",
+                "properties": {
+                  "appLock": {
+                    "description": "true if application controlled static route exist",
+                    "type": "boolean"
+                  },
+                  "routeSlaveSuc": {
+                    "description": "true if this (routing slave) node needs a network update",
+                    "type": "boolean"
+                  },
+                  "LWR": {
+                    "description": "Last working route",
+                    "$ref": "#/definitions/routeCacheLine"
+                  },
+                  "NLWR": {
+                    "description": "Next last working route",
+                    "$ref": "#/definitions/routeCacheLine"
+                  }
+                }
+              }
+            },
+            "required": [
+              "nodeId",
+              "controllerSucUpdateIndex",
+              "neighbours",
+              "nodeInfo"
+            ]
+          }
+        },
+        
+        "sucState": {
+          "type": "object",
+          "properties": {
+            "lastIndex": {
+              "description": "One-based index into updateNodeList (1-64) pointing at the last valid entry in the array. 255 (SUC_OUT_OF_DATE) if no updates has been sent",
+              "$ref": "#/definitions/uint8"
+            },
+            "updateNodeList": {
+              "type": "array",
+              "maxItems": 64,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "nodeId": {
+                    "$ref": "#/definitions/nodeId"
+                  },
+                  "changeType": {
+                    "description": "SUC change type (1:Add, 2:Delete, 3:Update Range)",
+                    "type": "integer",
+                    "oneOf": [
+                      { "const": 0, "description": "Unused SUC change element" },
+                      { "const": 1, "description": "Add" },
+                      { "const": 2, "description": "Delete" },
+                      { "const": 3, "description": "Update Range" }
+                    ]
+                  },
+                  "nodeInfo": {
+                    "description": "Command classes",
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "$ref": "#/definitions/uint8"
+                    }
+                  }
+                },
+                "required": ["nodeId", "changeType", "nodeInfo"]
+              }
+            }
+          }
+        },
+
+        "applicationData": {
+          "description": "Base64 encoded application data",
+          "type": "string"
+        }
+      },
+      "required": [
+        "nodeId",
+        "ownHomeId",
+        "learnedHomeId",
+        "lastUsedNodeId",
+        "staticControllerNodeId",
+        "controllerConfiguration",
+        "cmdClassList",
+        "nodeTable",
+        "sucState"
+      ]
+    },
+
+    "appConfig": {
+      "oneOf": [
+        {
+          "description": "Controller application configuration for version 7.xx",
+          "type": "object",
+          "properties": {
+            "rfRegion": {
+              "$ref": "#/definitions/uint8"
+            },
+            "txPower": {
+              "comment": "TODO does this one need to be signed?",
+              "$ref": "#/definitions/uint8"
+            },
+            "power0dbmMeasured": {
+              "comment": "TODO does this one need to be signed?",
+              "$ref": "#/definitions/uint8"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "description": "Controller application configuration for version 6.xx",
+          "type": "object",
+          "properties": {
+            "watchdogStarted": {
+              "type": "integer"
+            },
+            "powerLevelNormal": {
+              "$ref": "#/definitions/powerLevel"
+            },
+            "powerLevelLow": {
+              "$ref": "#/definitions/powerLevel"
+            },
+            "powerMode": {
+              "type": "integer"
+            },
+            "powerModeExtintEnable": {
+              "type": "integer"
+            },
+            "powerModeWutTimeout": {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "$ref": "#/definitions/uint8"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": [
+    "backupInfo",
+    "zwController",
+    "appConfig"
+  ]
+}

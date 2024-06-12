@@ -1,0 +1,78 @@
+{
+   "ZGWBackupInfo" : {
+      "versionMinor" : 0,
+      "versionMajor" : 1,
+      "sourceChipType" : 5,
+      "sourceZGWVersion" : "2.61.01",
+      "sourceProtocolVersion" : "6.71.05"
+   },
+   "zgw" : {
+      "nodeList" : [
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 1,
+               "homeId" : "0xF9D0C8EF"
+            },
+            "zgwZWNodeData" : {
+               "endpoints" : [{"endpointId" : 0}],
+               "grantedKeys" : 113,
+
+               "probeState" : {
+                  "state" : "RE-INTERVIEW"
+               }
+            }
+         },
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 2,
+               "homeId" : "0xF9D0C8EF"
+            },
+            "zgwZWNodeData" : {
+               "endpoints" : [{"endpointId" : 0}],
+               "grantedKeys" : 1,
+               "probeState" : {"state" : "RE-INTERVIEW"}
+            }
+         },
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 3,
+               "homeId" : "0xF9D0C8EF"
+            },
+            "zgwZWNodeData" : {
+               "endpoints" : [{"endpointId" : 0}],
+               "grantedKeys" : 0,
+               "probeState" : {"state" : "RE-INTERVIEW"}
+            }
+         },
+         {
+            "nodeUID" : {
+               "uidType" : "ZW Net ID",
+               "nodeId" : 4,
+               "homeId" : "0xF9D0C8EF"
+            },
+            "zgwZWNodeData" : {
+               "endpoints" : [{"endpointId" : 0}, {"endpointId" : 1}, {"endpointId" : 2}, {"endpointId" : 3}],
+               "grantedKeys" : 1,
+               "probeState" : {"state" : "RE-INTERVIEW"}
+            }
+         }
+      ],
+      "zwNetworkData" : {
+         "zwSecurity" : {
+            "ECDHPrivateKey" : "44F618C47EEF8CE8EB292E89948FB875F319E4DF171A1C7C7023D68B0901A554",
+            "S0key" : "9EF151994B38C859CF99FEA2C86AAC9B",
+            "S2UnauthenticatedKey" : "BCE5D3B346E0C664B5F74BF61D26F377",
+            "S2AuthenticatedKey" : "65EF9907349DB8622D0291A55E175D31",
+            "S2AccessKey" : "3CED327E69EA011789D7F78CCF27A5E9",
+            "S2AuthenticatedKeyLR": "4B6312E0422224B1E09598526506C91C",
+            "S2AccessKeyLR": "05E51115A6F72CDE7C18406745E74AE2"
+         }
+      },
+      "zgwTemporaryAssociationData" : {
+         "virtualNodeList" : [5]
+      }
+   }
+}

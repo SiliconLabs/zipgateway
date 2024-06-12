@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ConfigurationItem AppVersion="5.39.443">
+  <PreKitting>
+    <ProvisioningList />
+  </PreKitting>
+  <ViewSettings>
+    <IMAView NetworkLayoutString="0[1000,1000];" UseNetworkBackgroundColor="false" />
+    <SecurityView IsTabS0Selected="false" />
+    <EncryptDecryptView IsTabS0Selected="false" />
+  </ViewSettings>
+  <SecuritySettings>
+    <NetworkKey Class="7" Value="A333966D314FA07628623C23E0E9A584" />
+    <NetworkKey Class="0" Value="644E2701E5B95014BFCE070FA5F47453" />
+    <NetworkKey Class="1" Value="D8568829825D72E28B137693DBD6E7CD" />
+    <NetworkKey Class="2" Value="F25A512C3D0763AEC7B48698D0479CE2" />
+    <TestS2Settings>
+      <Parameters />
+      <Frames />
+      <Extensions />
+      <IsActive>false</IsActive>
+    </TestS2Settings>
+    <TestS0Settings>
+      <IsActive>false</IsActive>
+    </TestS0Settings>
+  </SecuritySettings>
+  <Node Id="1" NodeInfo="D39601020201" RoleType="0" NodeType="0" CommandClasses="5E86727A7322855970565A989F6C557A74">
+    <SecurityExtension Keys="0x87" CommandClasses="86727359857A" />
+  </Node>
+  <Node Id="2" NodeInfo="938401030F02" IsVirtual="true" NodeType="0" />
+  <Node Id="3" NodeInfo="938401030F02" IsVirtual="true" NodeType="0" />
+  <Node Id="4" NodeInfo="938401030F02" IsVirtual="true" NodeType="0" />
+  <Node Id="5" NodeInfo="938401030F02" NodeType="0" />
+  <Node Id="6" NodeInfo="D39C01041000" NodeType="0" />
+</ConfigurationItem>

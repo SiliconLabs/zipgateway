@@ -1,0 +1,774 @@
+/**
+ * \mainpage Z/IP Gateway Documentation
+ *
+ * The Z/IP Gateway documentation consists of four pages. \n
+ * \n
+ *
+ * The first page is the \ref pageI.  This page contains the \ref
+ * arch, \ref build procedure, \ref install steps, \ref libzwaveip and some
+ * implementation details (such as database,
+ * Firmware Update encapsulation, the support of additional command classes, the Z-Wave module settings).
+ * \n Subpage \ref page-zgw-data gives an overview of the key data structures in the Z/IP Gateway.\n
+ * Subpage \ref migration presents the migration tool and all required components that help to migrate the third-party gateway to Z/IP Gateway.
+ *
+ * The Z/IP Gateway's main components are presented in the second page.
+ *
+ * The last two pages describe the data structures and files of Z/IP Gateway source code. 
+ *
+ *
+ * \page pageI Z/IP Gateway User Guide
+ *
+ *
+ * \section intro Introduction
+ *
+ * The Z/IP Gateway is an application which allows internet Z/IP
+ * clients to contact and control nodes in a Z-Wave network.  Through
+ * the Z/IP Gateway each node on the Z-Wave network behaves as if it
+ * is an IP client on the network.
+ *
+ * This guide describes how to compile, install, and run the Z/IP
+ * Gateway on an Ubuntu Linux system and Raspberry Pi 3B+ Raspbian Stretch.
+ *
+ * The guide also briefly mentions the LibZWaveIP Z/IP Client as a sample client and 
+ * the demonstration of its usage is shown in LibZWaveip Doxygen documentation.
+ *
+ *
+ * \subsection purpose Overview
+ *
+ * Section \ref build describes how to compile Z/IP Gateway  The Z/IP Gateway Virtual machine is already pre-configured
+ * for compilation
+ *
+ * The \ref install section describes how to install, remove,
+ * configure and run the Z/IP Gateway.
+ *
+ * There is a \ref trouble section.
+ *
+ * Section describing \ref libzwaveip.
+ *
+ * Section describing how to \ref sqlite 
+ 
+ * Section \subpage page-zgw-data describes and documents the Runtime
+   State of a Z/IP Gateway and how it is serialized for persistence
+   across reboots or backups.
+ *
+ * Section \subpage backup_recover describes how to backup a gateway and recover it again.
+ * 
+ * Section \subpage migration describes how to migrate data from an
+ * older controller to a Z/IP Gateway product.
+ *
+
+ * \subsection audience Audience and prerequisites
+ * 
+ * The intended audience is Z-Wave Customers and Partners.  The guide
+ * expects a general knowledge of Z-Wave and of embedded development.
+ *
+ * \section arch Overall Architecture of Z/IP Gateway
+ * Z/IP Gateway requires ethernet connectivity and access to the raw ethernet frames. On Linux the raw ethernet
+ * connectivity is achieved by using the Linux TAP/TUN driver.
+ * The Z-Wave network is reached through a Z-Wave serial API dongle connected to a host serial or USB port.
+ *
+ * Z/IP Gateway application works as a IPv6 gateway between a LAN network and a Z-Wave PAN(Personal Area Network).
+ * Conceptually, Z/IP Gateway and the Linux system can be seen as separate hosts connected to the same LAN,
+ * even though the Linux system is running Z/IP Gateway with its IPv6 network stack.
+ * \image html userguide.png
+ * In this figure the Z-Wave PAN has the prefix <b>fd00:bbbb::/64</b> and the LAN has the
+ * prefix <b> fd00:aaaa::/64 </b>
+ *
+
+ * \section build Compiling Z/IP Gateway
+ *
+ * This section describes the pre-requisites and build process to
+ * build a Z/IP Gateway.
+ *
+ * \subsection zipgw_docker_i386 Compilation of Z/IP Gateway in i386 Ubuntu docker
+
+\subsubsection h On host machine
+\verbatim
+cd docker/i386_ubuntu_20_04/
+make image
+docker run -v <ZIP Gateway source directgory>:/zgw -it zwave/zgw_i386_ubuntu_20_04 bash
+\endverbatim
+
+\subsubsection d Inside docker 
+\verbatim
+mkdir build
+cd build
+cmake ..
+make
+make package
+\endverbatim
+
+ * \subsection zipgw_docker_armhf Compilation of Z/IP Gateway in arm Ubuntu docker for Raspberry Pi
+\subsubsection h On host machine
+\verbatim
+cd docker/armhf_debian_stretch_cross/
+make image
+docker run -v <ZIP Gateway source directgory>:/zgw -it zwave/zgw_armhf_debian_stretch_cross bash
+\endverbatim
+\subsubsection d Inside Docker 
+\verbatim
+mkdir build
+cd build
+cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/debian_stretch_armhf.cmake ..
+make
+make package
+\endverbatim
+
+ * \subsection zipgw_native Native compilation of Z/IP Gateway on Ubuntu
+ *
+ * This section describes compiling the Z/IP Gateway on and for Ubuntu 20.04 LTS <br> 
+ *
+ * Install the build dependencies for Z/IP Gateway with following command:
+ *
+ * <b> For 64bit Ubuntu </b>
+\verbatim
+$ sudo dpkg --add-architecture i386
+$ sudo apt-get update
+$ sudo apt-get install -y doxygen graphviz mscgen roffit perl git python3 cmake gcc xsltproc bison flex \
+                          gcc-9-multilib pkg-config:i386 libssl-dev:i386 libc6-dev:i386 libusb-1.0-0-dev:i386 libjson-c-dev:i386 \
+                          openjdk-8-jre curl g++-9-multilib libstdc++-9-dev
+\endverbatim
+
+ * - Download the zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}-Source.tar.bz2 (compressed file) from the Z-Wave technical support website.
+ * - Uncompress the Z/IP Gateway sources compressed file
+ * \verbatim $ tar -xjvf zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}-Source.tar.bz2 \endverbatim
+ * - Change directory to where the Z/IP Gateway sources are uncompressed
+ * \verbatim $ cd zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}-Source/usr/local/\endverbatim
+ * - Create build directory
+ * \verbatim $ mkdir build \endverbatim
+ * \verbatim $ cd build \endverbatim
+ * - Run cmake in one of the following ways
+ *    - with DTLS
+ * \verbatim $ cmake ..\endverbatim
+ *    - without DTLS
+ * \verbatim $ cmake -DDISABLE_DTLS=True ..\endverbatim
+ * - Run make
+ * \verbatim $ make\endverbatim
+ * \verbatim $ make package \endverbatim
+ * - Find the Debian .deb package (Package is named nodtls for Non DTLS build)
+\verbatim 
+$ ls zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}-Linux-i386.deb
+\endverbatim
+ * - Refer to \ref install_deb for installing Z/IP Gateway
+   
+ * \subsection zipgw_rpi_native Native compilation of Z/IP Gateway on Raspberry Pi 3B+ Raspbian GNU/Linux 9.3 stretch
+ * This section describes compiling the Z/IP Gateway on and for
+ * Raspberry Pi 3B+ (Raspbian Stretch)<br> 
+ * - Install the build dependencies for Z/IP Gateway with following command:
+ * \verbatim $ sudo apt-get install cmake gcc bison flex xsltproc libssl-dev libusb-1.0-0-dev libjson-c-dev\endverbatim
+ * - Download the zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.0-Source.tar.bz2 (compressed file) from the Z-Wave technical support website.
+ * - Uncompress the Z/IP Gateway sources compressed file
+ * \verbatim $ tar -xjvf zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}-Source.tar.bz2 \endverbatim
+ * - Change directory to where the Z/IP Gateway sources are uncompressed
+ * \verbatim $ cd zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}-Source/usr/local/\endverbatim
+ * - Create build directory
+ * \verbatim $ mkdir build \endverbatim
+ * \verbatim $ cd build \endverbatim
+ * - Run cmake in one of the following ways
+ *    - with DTLS
+ * \verbatim $ cmake ..\endverbatim
+ *    - without DTLS
+ * \verbatim $ cmake -DDISABLE_DTLS=True ..\endverbatim
+ * - Run make
+ * \verbatim $ make package\endverbatim
+ * - Find the Debian .deb package (Package is named nodtls for Non DTLS build)
+\verbatim 
+$ ls zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}-Linux-stretch-armhf.deb
+\endverbatim
+ * - Refer to \ref install_deb for installing Z/IP Gateway
+
+ * \section install Installing and Launching the Z/IP Gateway
+ *
+ * This section describes how to install, (re-)configure, start, stop,
+ * and un-install the Z/IP Gateway.
+ *
+ * \subsection install_deb Installing Z/IP Gateway .deb package
+ *
+ * \subsubsection sec_install_dep Install dependencies of Z/IP Gateway Debian package.
+  *
+  * For x86_64 architecture of Debian non-stretch and Ubuntu 16.04 and before
+  \verbatim
+  $ sudo apt-get install libusb-1.0-0:i386 libssl:i386 radvd:i386 parprouted:i386 bridge-utils:i386 libjson-c2:i386 net-tools
+  \endverbatim
+  * for x86 architectures of Debian non-stretch and Ubuntu 16.04 and before
+  \verbatim
+  $ sudo apt-get install libusb-1.0-0 libssl radvd parprouted bridge-utils libjson-c2 net-tools
+  \endverbatim
+  * for (Raspberry Pi 3B+) Debian stretch
+  \verbatim
+  $ sudo apt-get install libusb-1.0-0 libssl radvd parprouted bridge-utils libjson-c3 net-tools zip unzip
+  \endverbatim
+  *
+
+ * \subsubsection sec_install_gw_deb Install the Z/IP Gateway Debian Package
+ *
+ * \warning Because of various network configuration changes, its strongly recommended that the system is rebooted
+ * after Z/IP Gateway installation. <br>
+ *
+ * - For Raspberry Pi 3+ Raspbian GNU/Linux 9.3 stretch 
+ \verbatim
+ $ sudo dpkg -i zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}-Linux-stretch-armhf.deb
+ \endverbatim 
+ * - For 32bit or 64bit Ubuntu
+ \verbatim
+ $ sudo dpkg -i zipgateway-${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}-Linux-i386.deb
+ \endverbatim 
+ *
+  * <b>Installation wizard asks following questions to configure Z/IP Gateway</b><br> 
+  *a. Serial port (ZipSerialAPIPortName), 
+  * \note Check the system log after plugging the z-wave controller to find out the Serial port. Use command <b><tt> dmesg </tt></b> to see the system log
+  *
+  *b. IPV6 address of Z/IP Gateway(ZipLanIp6) <br>
+  *c. IPV6 prefix of Z-wave Network(ZipPanIp6) <br>
+  *d. The type of network interface, if its wireless or wired.  The network interface in question here 
+  * is the interface where Z/IP Gateway will listen for Z/IP Client connection requests and/or through which Z/IP client will request for DHCP leases in case of IPV4 communication
+  * Z/IP Client <-wired-> Z/IP Gateway 
+  * \note Installation might fail if any of the Z/IP Gateway dependencies are not installed because of any reason. 
+  Steps below can this issue by installing the dependencies automatically.
+\verbatim
+$ sudo apt-get update
+$ sudo apt-get -f install
+\endverbatim
+
+ * \subsection config Configuring the Z/IP Gateway Installation
+ * \subsubsection manual Manual of Z/IP Gateway configuration variables
+ * <a href="zip.html">Manual page of zipgateway </a><br>
+ *
+ * <b> See the link above and "CONFIGURATION FILE" section of for more configuration options </b>
+ *
+ * These options can also be configured manually inside <b> /usr/local/etc/zipgateway.cfg</b> <br>
+ *
+
+ * \subsubsection debian_config Configuration UI
+ * Reconfiguration asks the same questions as while installing.
+\verbatim
+$ sudo dpkg-reconfigure zipgateway
+\endverbatim
+ * \see \ref sec_install_gw_deb
+ *
+ * \subsection run Starting or Stopping Z/IP Gateway
+\verbatim
+$ sudo /etc/init.d/zipgateway start
+\endverbatim
+ *
+\verbatim
+$ sudo /etc/init.d/zipgateway stop
+\endverbatim
+\note Run following command to see Z/IP Gateway periodic log in another terminal
+\verbatim
+$ sudo tail -f /var/log/zipgateway.log
+\endverbatim
+ * \subsection verifyzipgwrun Verifying Z/IP Gateway Execution
+ * - Z/IP Gateway log
+  * - If everything goes well you should see some periodic output in \c /var/log/zipgateway.log <br>
+  * Z/IP Gateway also uses logrotate to archive the logs when the size of the log
+  * file gets bigger than 10 Mega Bytes. This can be configured in /etc/logrotate.d/zipgateway
+  * after the installation of the Z/IP Gateway Debian package. 
+ * - See status of Z/IP Gateway
+\verbatim
+$ ps ax|grep zipgateway
+\endverbatim
+ * Or  
+\verbatim $ sudo /etc/init.d/zipgateway status \endverbatim
+For e.g.
+\code
+test@zipgw255vm:/usr/local/etc$ sudo /etc/init.d/zipgateway status
+  zipgateway.service - LSB: start Z/IP Gateway (zipgateway)
+   Loaded: loaded (/etc/init.d/zipgateway)
+   Active: active (running) since Wed 2016-02-24 09:03:15 CET; 2min 7s ago
+     Docs: man:systemd-sysv-generator(8)
+  Process: 14908 ExecStop=/etc/init.d/zipgateway stop (code=exited, status=0/SUCCESS)
+  Process: 14979 ExecStart=/etc/init.d/zipgateway start (code=exited, status=0/SUCCESS)
+   CGroup: /system.slice/zipgateway.service
+           --14985 /usr/local/sbin/zipgateway --
+
+Feb 24 09:03:15 zipgw255vm systemd[1]: Starting LSB: start Z/IP Gateway (zipgateway)...
+Feb 24 09:03:15 zipgw255vm zipgateway[14979]: * Starting Z/IP Gateway zipgateway
+Feb 24 09:03:15 zipgw255vm systemd[1]: Started LSB: start Z/IP Gateway (zipgateway).
+Feb 24 09:03:15 zipgw255vm zipgateway[14979]: ...done.
+\endcode
+
+ * - Verify that the Linux tap interface(tap0/tap1) has been created by typing
+\code
+$ ifconfig tap0
+tap0      Link encap:Ethernet  HWaddr 3E:A6:A5:2F:1C:60
+          inet6 addr: fe80::3ca6:a5ff:fe2f:1c60/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:103 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:2265 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:500
+          RX bytes:7658 (7.4 KiB)  TX bytes:265843 (259.6 KiB)
+\endcode
+ *
+ * - To check in network setup try to ping the Z/IP Gateway ZipLanIp6 address:
+ * \note \c ZipLanIp6 configuration can be found in \c /usr/local/etc/zipgateway.cfg file
+ *
+ \code
+$ ping6 fd00:aaaa::3
+PING fd00:aaaa::3(fd00:aaaa::3) 56 data bytes
+64 bytes from fd00:aaaa::3: icmp_seq=1 ttl=64 time=3.53 ms
+64 bytes from fd00:aaaa::3: icmp_seq=2 ttl=64 time=4.69 ms
+64 bytes from fd00:aaaa::3: icmp_seq=3 ttl=64 time=0.958 ms
+\endcode
+ *
+ * - If the Z/IP Gateway does not reply there is a network problem. If it does everything is ready.
+ * - Refer to \ref trouble incase
+ *
+
+ * \subsection uninstall Uninstalling Z/IP Gateway
+\verbatim $ sudo dpkg -r zipgateway \endverbatim
+
+ * \section trouble Troubleshooting
+ * \subsection no_log No log in /var/log/zipgateway.log
+ * - Stop Z/IP Gateway init script
+\verbatim $ sudo /etc/init.d/zipgateway stop \endverbatim
+ * - Make sure that the zipgateway process is not running
+\verbatim $ sudo ps ax|grep zipgateway \endverbatim
+ * - Kill the process if its running
+\verbatim $ sudo kill -9 <pid> \endverbatim
+ * - Run zipgateway as standalone process and not init script to see output on console
+\verbatim $ sudo zipgateway \endverbatim
+ * \subsection pem Permission files
+ * \b Error:
+\code
+1573020734 Error loading certificate, please check the file.
+1573020734 Error loading key, please check the file.
+\endcode
+ * \b Solution: check the \c zipgateway.cfg file and the check the path for <tt> ZipCaCert, ZipCert, ZipPrivKey </tt> and make sure that these files are present
+ * \subsection tun zipgateway.tun Permission denied
+ * \b Error:
+\code
+sh: 1: /usr/local/etc/zipgateway.tun: Permission denied
+1573022431 Error executing: LANIP=fd00:aaaa::0003 HANPREFIX=fd00:bbbb::0001/64 TUNDEV=tap0 /usr/local/etc/zipgateway.tun up
+\endcode
+ * \b Solution: check the permissions of \c zipgateway.tun file with command <tt> <b>ls -l /usr/local/etc/zipgateway.tun</b></tt>.<br>
+ It should be <tt><b> -rwxr-xr-x </b></tt>. If not do <tt> "sudo chmod 755 /usr/local/etc/zipgateway.tun" </tt>
+
+ * \subsection kconfig Kernel configurations
+ * Following support is needed to be configured in Linux Kernel for Z/IP Gateway
+\code
+ * CONFIG_TUN=y (TUN/TAP interface Support)
+ * CONFIG_BRIDGE/basic=y (Bridge Support)
+\endcode
+ * \subsection Wireless
+ * Wireless configuration of Z/IP Gateway needs various processes and daemons running in background.
+ * Make sure that following processes are running.
+ * \subsubsection radvd radvd 
+ * The router advertisement daemon (radvd) is run by Linux or BSD systems acting as IPv6 routers. It sends Router Advertisement messages, specified by RFC 2461, to a local Ethernet LAN periodically and when requested by a node sending a Router Solicitation message. These messages are required for IPv6 stateless autoconfiguration.
+ * In Z/IP Gateway setup, radvd sends advertisements on wireless interface. All the ends connected to that interface then will be able to talk to Z/IP Gateway and the PAN network of Z-wave nodes.
+\verbatim
+pi@raspberrypi:~ $ /etc/init.d/radvd status
+  radvd.service - LSB: Router Advertising Daemon
+   Loaded: loaded (/etc/init.d/radvd)
+   Active: active (running) since Wed 2017-01-04 10:02:25 UTC; 18min ago
+  Process: 732 ExecStart=/etc/init.d/radvd start (code=exited, status=0/SUCCESS)
+   CGroup: /system.slice/radvd.service
+            -762 /usr/sbin/radvd -u radvd -p /var/run/radvd/radvd.pid
+            -764 /usr/sbin/radvd -u radvd -p /var/run/radvd/radvd.pid
+\endverbatim
+ * or
+\verbatim
+pi@raspberrypi:~ $ ps ax|grep radvd
+  762 ?        S      0:00 /usr/sbin/radvd -u radvd -p /var/run/radvd/radvd.pid
+\endverbatim
+ * \subsubsection parprouted parprouted
+ * The daemon listens for incoming ARP requests, and in case the location of the requested IP address is unknown, forwards them to other interfaces, as well as updates kernel ARP table with the received replies. When necessary, the daemon generates an ARP reply itself, which causes the stations to send traffic to the host daemon is running on. By automatically adding appropriate /32 routes to Linux kernel IP routing table for the hosts learned via ARP , daemon ensures that the Linux kernel will be able to route the packets to the destination host when it receives them without any need routing/subnetting manually
+\verbatim
+pi@raspberrypi:~ $ ps ax|grep parprouted 
+  965 ?        Ssl    0:05 /usr/sbin/parprouted wlan0 tap0
+\endverbatim
+ * \subsubsection udprelay udprelay 
+ * udprelay is daemon which listens for udp packets to port(IPv4 or/and IPV6) on one interface and forwards the udp packets to port(IPv4 or/and IPV6) to another or same interface's port(IPv4 or/and IPV6)
+\verbatim
+pi@raspberrypi:~ $ ps ax|grep udprelay 
+ 1560 ?        S      0:00 udprelay -i tap0 -b wlan0 -4 4123 -6 4123 -4 5353 -6 5353
+ 1561 ?        S      0:00 udprelay -i wlan0 -b tap0 -4 5353 -6 5353
+\endverbatim
+ *
+ * \section libzwaveip LibZWaveIP (Z/IP Client)
+LibZWaveIP is a sample library written in C that you may use to manage and test your Z-Wave network from your IP network.
+For more details, please refer to LibZWaveIP Doxygen documentaion (libzwaveip-@VERSION_MAJOR@.@VERSION_MINOR@.@PATCH_LEVEL@.release-docs.zip) in the release bundle.
+\section sqlite Overview of database
+As of Z/IP Gateway ver7.14.02, SQLite database is used to persist necessary runtime information, such as node liveness, network state, home ID, etc. For database of Z/IP Gateway version prior to 7.14.02 to be upgraded, a seperate tool is needed to perform database conversion from eeprom to SQLite. Please refer to \ref convert_eeprom_22x and \ref convert_eeprom_26x_above for more details.
+\subsection legacy_eeprom_overview Overview of legacy eeprom
+|<b>EEPROM Version</b>     |   None      |       V0    |      V2.0   | V2.1 | V2.2 | V2.3 |
+|:-----------------------|-------------:|----------:|-------------:|------:|-------:|-------:|
+|<b>ZIP Gateway Version</b>|2.2X         |     2.6X    | 2.81.00     | 7.01.00 | 2.81.03 | 7.11.01 |
+|<b>RD Magic Version</b>   |   N/A       | RD_MAGIC_V0 | RD_MAGIC_V1 | RD_MAGIC_V1 | RD_MAGIC_V1 | RD_MAGIC_V1 |
+|<b>EEPROM Changes</b>     |   N/A       | aggregated endpoints | dsk and node state changes | node CC version, node properties flags, and probe flags | Index of node pointer shifted (No Version CC fields in this version) | Index of node pointer shifted with Version CC fields |
+|<b>SQLite Conversion</b>  |   zgw_eeprom_2_25_to_2_61 + zgw_eeprom_to_sqlite |  zgw_eeprom_to_sqlite |||||
+\subsection convert_eeprom_22x How to convert eeprom 2.2x to SQLite database
+To use eeprom file created/modified by ZIP Gateway 2.2x in Z/IP Gateway 7.14.02 and later,
+the file has to be converted with 2 tools, called <b>zgw_eeprom_2_25_to_2_61</b> and <b>zgw_eeprom_to_sqlite</b> from ZIP Gateway package.
+It can be done with following commands.
+\verbatim $ ./zgw_eeprom_2_25_to_2_61 <eeprom-file-name>\endverbatim
+\verbatim $ ./zgw_eeprom_to_sqlite -e <eeprom.dat> -d <database.db>\endverbatim
+\note The zgw_eeprom_2_25_to_2_61 conversion happens inline in the file and the converted file can not be used again
+in 2.2X ZIP Gateway.
+\note More usage of zgw_eeprom_to_sqlite can be shown with <code>zgw_eeprom_to_sqlite -h</code> command.
+
+\subsection convert_eeprom_26x_above How to convert eeprom 2.6x and later to SQLite
+To convert the eeprom file 2.6X and later, zgw_eeprom_to_sqlite should be used to performs the database conversion.
+It can be done with the following command.
+\verbatim $ ./zgw_eeprom_to_sqlite -e <eeprom.dat> -d <database.db>\endverbatim
+\note More usage of zgw_eeprom_to_sqlite can be shown with <code>zgw_eeprom_to_sqlite -h</code> command.
+
+\section upgrading_gateway26x Upgrading the Z/IP Gateway from 2.6X version to latest version
+The 2.6X version of Z/IP Gateway does not support Smart Start functionality, but the version from 2.8X and above support Smart Start. 
+Moreover, Z/IP Gateway version 7.14.02 and later uses SQLite database for data storage.
+To exploit all these functionalities, the 2.6X version of the Gateway can be upgraded to the latest versions. 
+This can be performed using the backup/recover tool (reference: \ref backup_recover) together with SQLite database converter.
+
+For instance, the detailed procedures for upgrading Z/IP Gateway 2.6X version to @VERSION_MAJOR@.@VERSION_MINOR@.@PATCH_LEVEL@ is as follow:
+
+<ol>
+
+<li> Download and install Z/IP Gateway @VERSION_MAJOR@.@VERSION_MINOR@.@PATCH_LEVEL@ binary on Linux machine
+<li> Copy zw_programmer utility (/usr/local/bin/zw_propgrammer) to a system where the 2.6X Z/IP Gateway is running 
+<li> Stop the 2.6X Z/IP Gateway 
+<li> Flash the Z-Wave module firmware that support Smart Start (e.g.,the firmware of the SDK6.8X version of Z-Wave Protocol ) 
+     to 500-sereis chip using zw_programmer (reference: \ref migration_running_zw_programmer)
+     
+ \verbatim
+ $ Usage: zw_programmer -s serial_device -p firmware_image_file [-a] | -t ]   
+ $ -s specifies the path of for the Serial device / Z-Wave module
+ $ -a use if the chip is already in Auto Programming Mode (enforced by holding down the reset button).
+ $ -t test mode. Will connect to serial device and show info about the Z-Wave module.
+ \endverbatim
+
+<li> Perform the database conversion on eeprom.dat and expect the output to be zipgateway.db (reference: \ref convert_eeprom_26x_above)
+
+\verbatim
+$ Usage zgw_eeprom_to_sqlite: -e <eeprom.dat> -d <database.db> [-f] 
+
+$ Converts eeprom.dat files form ZGW >= 2.61 to a sqlite database,
+$ after doing some validation of the input  eeprom.dat file.
+$ The program will return 0 if conversion was succsessfull.
+
+$ Options:
+$ 	-e <eeprom.dat> eeprom file to use.
+$ 	-d <database.db> filename of the sqlite database to generate
+$ 	-f Force conversion of remaining nodes despite detecting an
+$ 	   invalid node. This flag should be used with caution. Some
+$ 	   nodes may be left unconverted.
+\endverbatim
+
+<li> Install @VERSION_MAJOR@.@VERSION_MINOR@.@PATCH_LEVEL@ Z/IP Gateway binary
+<li> Copy zipgateway.db to Z/IP Gateway data folder (default: /usr/local/var/lib/zipgateway/)
+<li> Start the @VERSION_MAJOR@.@VERSION_MINOR@.@PATCH_LEVEL@ Z/IP Gateway process
+<li> Resume normal operation 
+
+\section fwupd_encap Firmware Update encapsulation
+This section describes how a Z/IP Client can go about updating the flash
+firmware on the Z-Wave 500 and Z-Wave 700 physically connected to the Z/IP Gateway. The Firmware Update command class defines a format for
+ transferring the flash image but it does not specify the format used to encode the image. From the 
+ point of view of the command class, the flash image is simply raw binary data being transferred. 
+ The format implemented in the reference Z/IP Gateway is described in this
+ section and the Z/IP Gateway will reject the firmware update if this format is not used.
+
+The reference Z/IP Gateway has several different firmware targets
+known to the Firmware Update Command Class: ZW_FW_ID,
+ZIP_GATEWAY_APPL_ID, and ZW_EEPROM_ID. The encapsulation described
+here is only applicable for the ZW_FW_ID firmware target.
+
+<b>Note</b> that the encapsulation is a special case for updating the firmware physically attached to the
+Gateway. It should not be used when updating PAN nodes.
+<br>
+Also note that COMMAND_CLASS_FIRMWARE_UPDATE does not require this particular encapsulation format. It
+specifically allows any payload format to be used. The specification given here is specific to the
+implementation of the the Z/IP Gateway and not a part of the certification requirements.
+
+\subsection fwupd_encap_500 Z-Wave 500
+In order to do firmware update for a Z-Wave 500-series UZB stick directly connected to the gateway, a special encapsulation
+must be added to the raw firmware image. The raw firmware image must be obtained from an embedded SDK.
+An example of a suitable hex file for an EU-frequency UZB device is
+serialapi_controller_bridge_OTW_SD3503_USBVCP_EU_WITH_BOOTLOADER.hex from SDK 6.7x.
+
+Once the raw firmware image has been encapsulated properly, the resulting data structure must be transmitted
+from a Z/IP Client to the gateway using COMMAND_CLASS_FIRMWARE_UPDATE. Once the transmission is 
+completed, the Z/IP Gateway will proceed to update the physically connected UZB stick. 
+
+The encapsulation format has the following structure:
+
+\code
+struct flash_encap {
+  uint8_t zwfw[4] = {'Z', 'W', 'F' ,'W'};
+  uint32_t size;                                   /* size of everything except md5 digest */
+  uint8_t hex_file[128*1024 - 4];        /* hex file in binary form, excluding last 4 bytes */
+  uint32_t crc32_with reversed_bits;
+  uint8_t md5_digest[16];                  /* Covers all the preceeding fields in struct flash_encap */
+}
+\endcode
+
+The ManufacturerID and ProductID must match what the gateway has been configured for (see the 
+CONFIGURATION FILE section of the <a href="zip.html">manual page</a> for details). 
+By default, the manufacturerID is 0 (Z-Wave) and the ProductID should be 0x01 (ZIP Gateway).
+
+
+The following python code snippet will convert an Intel Hex file as supplied on the Embedded SDK into
+the format needed by the Z/IP Gateway. The resulting data should then be transferred with 
+COMMAND_CLASS_FIRMWARE_UPDATE from a Z/IP Client to the gateway.
+
+\code
+def buildZIPR_ZWaveFirmware(self, src_file, dst_file):
+    '''
+    Convert a normal Z-Wave hex formatted firmware image into the bin format accepted by the ZIPR
+    '''
+    def reverseBit(s):
+        r = ""
+        for c in s:
+            x = ord(c)
+            x = ((x << 4) & 0xF0) | ((x >> 4) & 0x0F);
+            x = ((x << 2) & 0xCC) | ((x >> 2) & 0x33);
+            x = ((x << 1) & 0xAA) | ((x >> 1) & 0x55);
+            r = r + chr(x)
+        return r;
+    # Convert Z-wave hex file to binary file  with fixed length 128KB-4 bytes.
+    h = IntelHex(src_file)
+    b = h.tobinstr(0, None, 0xff, 128 * 1024 - 4)
+    # Do a CRC32 reversing the bit order and negating the output
+    crc = (~binascii.crc32(reverseBit(b)) & 0xffffffff)
+    # Unreverse the bit order and output the result little endian
+    b = b + reverseBit(struct.pack("<I", crc));
+    b = "ZWFW" + struct.pack("!I", 128 * 1024 + 8) + b
+    m = hashlib.md5()
+    m.update(b)
+    b = b + m.digest()
+    f = open(dst_file, "wb")
+    f.write(b)
+    f.close()
+\endcode
+
+
+\subsection fwupd_encap_700 Z-Wave 700
+When doing firmware update Z-Wave 700, the required encapsulation has been
+handled in the module so <b>no further encapsulation</b> needs to be added to the raw
+firmware image. Z/IP Client must transmit the raw firmware image to the gateway
+using COMMAND_CLASS_FIRMWARE_UPDATE. Once the transmission is completed, the
+Z/IP Gateway will proceed to update the physically connected Z-Wave 700 UZB stick.
+
+\section impl Implementation details
+This section describes implementation details, which are not covered by the Z-Wave command class specification.
+\subsection misc_learn Gateway Learn mode
+
+When the gateway is in learn mode it is important to set the Return interview status in the LEARN_MODE_SET
+command.  Not setting this can cause the gateway to fail to respond to commands right after the learn mode
+has completed./
+
+ \section add_ccs Supporting additional command classes as a Z/IP client
+A Z/IP client can add support for extra command classes to the Z/IP Gateway. Only one Z/IP client can 
+assume this role at any time. This is typically used by middlewares like Z-Ware.
+In order to do this, the Z/IP client must do the follwing:
+-# Configure itself as unsolicited destination using the
+UNSOLICITED_DESTINATION_SET command. It must contain the IP address and UDP port of a listening socket owned by the Z/IP client.
+-# Add the command classes to the Node Information Frame of the Z/IP Gateway by using the COMMAND_APPLICATION_NODE_INFO_SET command.
+-# Listen on the configured unsolicited destination IP/UDP port for DTLS-encrypted Z/IP frames.
+
+The ZIP Gateway will forward all commands it does not recognize to the unsolicited destination. The 
+listening Z/IP client must reply to the additional command classes it supports. The replies must be 
+sent using the unsolicited destination as source. Please note that only replies to commands received 
+via the unsolicited destination must be sent using the unsolicited destination as source. See \ref choosing_source_port for details. 
+
+The Z/IP client will also receive Version Command Class Get queries for the additional command classes. 
+It must reply to these, again using the unsolicited destination IP/port as source.
+
+In order to be Z-Wave Plus certified, the unsolicited destination needs to support these additional command classes:
+ - Association, version 2
+ - AGI
+ - Device Reset Locally
+ - Multi Channel Association, version 3
+ - Supervision
+
+For Z-Wave Plus v2, it additionally needs to support:
+ - Multi Command
+ 
+Please check Z-Wave Technical Services website
+https://www.silabs.com/products/wireless/mesh-networking/z-wave for an
+updated list
+of certification requirements.
+
+\subsection preserve_hdrext Preserving ZIP header extensions
+
+When replying to additional supported commands, the Z/IP EFI header extensions must be echoed back unmodified in the reply. This preserves
+the EFI information so replies are sent on the PAN with the correct encapsulation.
+
+\subsection choosing_source_port Choosing source IP address and UDP port
+Messages sent with the unsolicited destination IP and port as source are sent to the PAN as coming from the Z/IP Gateway itself. Therefore,
+replies to these commands will also be handled by the Z/IP Gateway first and only forwarded to the unsolicited destination as a fall-back.
+Z/IP clients should therefore use different source IP/UDP port combinations most of the time. The only exception is when responding to additional supported commands. 
+
+The following common Z/IP client operations must be carried out using a source IP or UDP 
+port *different from* the unsolicited destination:
+ - Anything that is not responding to additional supported C.C.s
+ - Interviewing PAN nodes. 
+ - Network management operations. E.g. initiating an Add Node or Learn mode process and Set Default.
+
+Failure to use a different source IP or UDP can result in missing replies from the PAN, because the gateway will intercept commands it supports.
+Those messages will appear lost to the interviewing Z/IP client. Note that using the Unsolicited Destination IP or UDP  will *appear* to work for command classes that the GW itself does not support.
+But it is highly recommended that a ZIP Client does not make assumptions on the command classes s supported by the GW and instead signals which messages it expects to have passed back by using a different source IP or UDP.
+  
+This table sums up how to choose the UDP source port:
+Purpose                                  |  UDP Source Port
+---------------------------------------  |  ------------------
+Responding to additional supported C.C.s | Unsolicited Destination port
+PAN node control/interview               | Random
+PAN node firmware upgrade                | Random
+Network Management                       | Random
+Anything else                            | Random
+
+
+The IP address must belong to the host running the Z/IP client.
+
+\section add_rf Setting RF region for Z-Wave 700 and 800
+The universal Z-Wave 700 can be instructed by Z/IP Gateway to change the radio frequency and SAW filter depending on the region. In order to do this, one field, ZWRFRegion, has to be set in zipgateway.cfg for indicating the RF region. (<a href="zip.html">Manual page of zipgateway</a>)
+
+\section add_tx Setting TX powerlevel for Z-Wave 700 and 800
+By default the transmit power level is hardcoded in the Z-Wave image downloaded
+to the Z-Wave chip but as there can be hardware differences in products that
+requires the Tx power to be changed. In order to do this, one pair of powerlevel
+setting, NormalTxPowerLevel and Measured0dBmPower, has to be set in zipgateway.cfg for indicating the TX powerlevel. (<a href="zip.html">Manual page of zipgateway</a>)
+The power level is in deci dBm. E.g. 1dBm output power will be 10 in
+MaxLRTxPower and -2dBm will be -20 in MaxLRTxPower. Note that this field is
+only available for Z-Wave 700 and 800.
+Valid range is -100 to 140 deci dBm and also in range according to local Regulations
+
+\section add_lr_tx Setting MAX Long Range TX powerlevel for Z-Wave 700 and 800
+By default the MAX Long Range transmit power level is hardcoded in the Z-Wave image downloaded
+to the Z-Wave chip but as there can be hardware differences in products that
+requires the MAX LR Tx power to be changed. In order to do this, powerlevel
+setting, MaxLRTxPowerLevel has to be set in zipgateway.cfg for indicating the MAX LR TX powerlevel. (<a href="zip.html">Manual page of zipgateway</a>)
+The power level is in deci dBm. E.g. 1dBm output power will be 10 in
+MaxLRTxPower and -2dBm will be -20 in MaxLRTxPower. Note that this field is
+only available for Z-Wave 700 and 800.
+Valid range for a 14dBm Board is -60 to 140 and for a 20dBm board, its -60 to 200 and also in range according to local Regulations
+
+\section time_command_class_support Time Command Class for 32-bit platforms.
+The Z/IP Gateway supports the Time Command Class, version 1. 
+
+This Command Class expects the time and timezone to be correctly set locally on the Z/IP Gateway (e.g. using an NTP server) to function properly.
+The Time Command Class module relies on the time.h library and 32-bits platforms will be affected by the Year 2038 problem. (https://en.wikipedia.org/wiki/Year_2038_problem).
+
+\section cmd_unsoc_dest Types of commands sent to unsolicited destinations
+
+The types of messages sent to both unsolicited destination include:
+ - Unsolicited Node Lists when network members change
+ - Additional supported command class commands and version requests
+ - Smart Start Add events
+ - INIFs from already included Smart Start nodes 
+
+\subsection sud Second unsolicited destination
+
+The second unsolicited destination (UD) is allowed to monitor the activities on the Z-Wave PAN only. For that purpose, it will receive the same messages as the first unsolicited destination. It should not reply to any of those 
+messages. It may still trigger scenes and send commands contingent on the messages received, but it should not reply to GET-type commands received via the 2nd UD address. 
+The Z/IP client may use the UNSOLICITED_DESTINATION_GET command to determine if it is the first UD. Otherwise it should assume it is the second UD.
+
+\section perm_ud Security permission checks on frames forwarded to Z/IP clients
+
+The gateway performs number of security permission checks before forwarding frames to the 
+unsolicited destination and other Z/IP clients. As always, these frames can serve one of two purposes: 
+Either for additional supported command classes or for receiving unsolicited messages from the PAN (
+typically configured via associations and lifeline associations).
+
+These rules apply for all Z/IP clients (both the unsolicited destination and others):
+ - If the frame is a supporting frame, i.e. a BATTERY_REPORT:
+   - If the sending node is a S2 node check that the frame was received on the highest common security level. If so, accept it.
+   - If the sending node is a non-secure or S0 node: Accept it.
+ - If the frame is a controlling frame, i.e. TIME_GET
+     - If the frame was received on a security level higher or equal to the minimal accepted level for that 
+     command class: Accept it. For example, a ZWAVE_PLUS_INFO get received on S2_AUTHENTICATED is ok, but a ASSOCIATION_SET non-secure is not ok). The extra_classes are also checked according to the same rules, where the accepted scheme is either non-secure or net_scheme.
+ - If a frame does not match the rules above it will be dropped.
+
+The following additional checks will be applied to frames going to the unsolicited destination only:
+ - All supporting frames are forwarded to the unsolicited destination, if they match the criteria above.
+ - All frames belonging to command classes listed in the secure part of the extra_classes are forwarded only if they are received on the GW's highest scheme(net_scheme is GW code).
+ - All frames belonging to command classes listed in the non-secure part of extra_classes are forwarded regardless of encapsulation.
+
+When checking a Supervision Get, the payload of a command is inspected and the entire command (including Supervision encapsulation) is forwarded according to the general and additional rules above.
+
+
+
+\section reestab DTLS re-establishment in case of missing Z/IP acks
+
+When a DTLS Z/IP client has requested a Z/IP Ack, but not received an indication of succes or failure (Ack, Nack or NAck Waiting), it should reestablish the DTLS session at least once and attempt transmission again. This DTLS session establishment should happen in addition to the in-session retransmissions recommended by SDS13784.
+
+The following pseudocode describes the sending process of a ZIP client including both in-session retransmissions and DTLS session establishment:
+\verbatim
+0. DTLS_reestablish_counter = 0 
+    ZIP_retransmit_counter = 0 
+1. Send Z/IP command with AckReq from client to server, 
+2. Time out and go to step 3 if more than 300 ms has elapsed. If ZIP ack is received go to step 10 instead. If a NAK Waiting is received, extend the timer with the expected delay.
+3. If ZIP_retransmit_counter is larger than ZIP_RETRANSMIT_LIMIT, go to step 4. 
+    Otherwise, increment zip_retransmit_counter and go back to step 1. 
+4. If DTLS_reestablish_counter < DTLS_REESTABLISH_LIMIT go to step 5. Otherwise go to step 100. 
+5. Reestablish DTLS session from another UDP source port on the client. 
+    Set zip_retransmit_counter = 0 
+6. Go back to step 1 and increment DTLS_reestablish_counter 
+10. Success. Message has been delivered. 
+100. Failure. Message could not be delivered. 
+\endverbatim
+The values of ZIP_RETRANSMIT_LIMIT and DTLS_REESTABLISH_LIMIT are chosen by the client. Typical values are ZIP_RETRANSMIT_LIMIT = 3 
+and DTLS_REESTABLISH_LIMIT = 1.
+
+It is necessary to attempt reestablishing the DTLS session because DTLS is unreliable; the Close Notify alert message can be lost just as any other DTLS message.
+ \section misc Miscellanous
+\subsection miscun Unsolicited destination configuration on Windows.
+ To set IPV6 address of one of the interface of Windows machine as unsolicited destination for Z/IP
+Gateway can be confusing when the interface is configured to have Temporary IPV6 adddress for all
+communications as per RFC 4941 IPv6 Privacy Extensions. As Z/IP Gateway configuration file needs
+an IPV6 address and Windows temporary IPV6 address changes on each reset of the interface. A
+workaround would be to disable the RFC 4941 IPv6 Privacy Extensions on Windows and use the
+Permanent IPV6 address. Following are the ways to disable it.
+
+To disable privacy extensions entirely, Run cmd.exe as administrator on windows and issue the following commands.
+\verbatim
+netsh interface ipv6 set privacy state=disabled store=active
+netsh interface ipv6 set privacy state=disabled store=persistent
+\endverbatim
+
+For more info, read http://andatche.com/blog/2012/02/disabling-rfc4941-ipv6-privacy-extensions-in-windows/
+
+
+\subsection miscnw Method to move static IP configuration from eth0 to br-lan along with the routes
+  * Assuming the interface eth0 was the active network connection.
+   * 1. Get the ip of eth0
+  \code
+  $ ifconfig eth0|grep "inet addr"
+  inet addr:192.168.10.93  Bcast:192.168.10.255  Mask:255.255.255.0
+  \endcode
+   * Here eth0 IP address is \c 192.168.10.93
+
+   * 2. get the old route
+   \code
+   $ route -n
+   Kernel IP routing table
+   Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+   0.0.0.0         192.168.10.254  0.0.0.0         UG    0      0        0 eth0
+   192.168.10.0    0.0.0.0         255.255.255.0   U     0      0        0 eth0
+   \endcode
+   * Here the gateway to internet is \c 192.168.10.254
+
+   * 3. Remove the IP from eth0
+   \code
+   $ sudo ifconfig eth0 0.0.0.0
+   \endcode
+   * 4. Assign the old IP address of eth0 (got in step 1) to br-lan
+   \code
+   $ sudo ifconfig br-lan up 192.168.10.93
+   \endcode
+   *
+   * 5. set the new route via \c br-lan with gateway address found in step 2
+   \code
+   $ sudo route add default gw 192.168.10.254 dev br-lan
+   \endcode
+
+   * 6. see if the routes are set properly now and see if "Use Iface" says br-lan
+   \code
+   $ route -n
+   Kernel IP routing table
+   Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+   0.0.0.0         192.168.10.254  0.0.0.0         UG    0      0        0 br-lan
+   192.168.10.0    0.0.0.0         255.255.255.0   U     0      0        0 br-lan
+   \endcode
+ 
+ 
+ */

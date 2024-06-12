@@ -1,0 +1,138 @@
+#!/bin/bash
+# © 2019 Silicon Laboratories Inc.
+#
+# This script triggers a backup of the gateway.
+#
+# The script performs the following tasks.
+# 1) Create a temporary folder to hold the zipgateway backup files
+# 2) Send a SIGUSR1 signal to the zipgateway process, to request a backup.
+#    The location of the backup folder and the PID of the script
+#    are written to a COMM_FILE.
+# 3) Wait for the zipgateway to send SIGUSR1, to indicate that it has updated COMM_FILE.
+#    The zipgateway will update when it starts and finishes the backup, or if the backup fails.
+#
+
+ZW_NVM_CONVERTER="@CMAKE_INSTALL_PREFIX@/bin/zw_nvm_converter"
+COMM_FILE=/tmp/zgw.file
+
+gw_signal_handler()
+{
+   read line < $COMM_FILE
+   if [[ "$line" == "backup started" ]]
+   then
+       echo "backup started"
+       #
+       # a hook to backend may be added heere, the gateway will be
+       # offline for ~20 seconds from this point
+       #
+   elif [[ $line == "backup failed" ]]
+   then
+       echo "backup failed. $ZGW_BACKUP_DIR might be incomplete"
+       exit 1
+   elif [[ $line == "backup done" ]]
+   then
+      echo "GW_BackupDate=$(date "+%Y.%m.%d-%H.%M.%S")" >>${ZGW_BACKUP_DIR}/manifest
+      eval $(cat ${ZGW_BACKUP_DIR}/manifest )
+      PROTOCOL_VERSION_SHORT=${GW_PROTOCOL_VERSION}
+      if [[ ${PROTOCOL_VERSION_SHORT:6} < "7.16" ]]; then
+        $ZW_NVM_CONVERTER -e $GW_PROTOCOL_VERSION "${ZGW_BACKUP_DIR}/nvm_backup" "${ZGW_BACKUP_DIR}/nvm.json"
+        rm -f "${ZGW_BACKUP_DIR}/nvm_backup"
+      fi
+      # ZGW creates the binary nvm backup. For ZGW version > 7.15, 
+      # we keep that file in the backup dir instead of converting it.
+      zip -j -r "${BACKUP_FILE}" "$ZGW_BACKUP_DIR" || {
+        echo "backup failed. $ZGW_BACKUP_DIR might be incomplete"
+        exit 1
+
+        echo ""
+      }
+      rm -rf "$ZGW_BACKUP_DIR" 
+      echo "Backup file created: $ZGW_BACKUP_DIR.zip"
+      echo "backup done"
+      exit 0
+   else
+       echo "Got signal with following unknown message: $line."
+   fi
+}
+
+print_help() {    
+    echo "Usage: $0 -b <backupfile> [-p <pid>]"
+    echo "   -b <backupfile>      : ZIP file containing a gateway backup file."
+    echo "   -p <pid>             : PID of Z/IP gateway"
+    exit 1
+}
+
+#try to guess the GW PID
+PIDS=$(pidof zipgateway | wc -w)
+if [ $PIDS -eq 1 ]
+then
+  ZGW_PID=$(pidof zipgateway)
+fi
+
+#Parse commnad line options
+while getopts "b:p:" o; do
+    case "${o}" in
+        p)
+            ZGW_PID=${OPTARG}
+            ;;
+        b)
+            BACKUP_FILE=${OPTARG}
+            ;;
+        *)
+            print_help
+            ;;
+    esac
+done
+
+
+if [[ -z "$ZGW_PID" ]]
+then
+    echo "Unable to determine PID of gateway "
+    print_help
+fi
+
+if [[ -z $BACKUP_FILE ]]
+then
+    print_help
+fi
+
+echo "zipgateway pid: $ZGW_PID, Script pid: $$"
+
+trap 'gw_signal_handler' SIGUSR1
+trap "rm -f $COMM_FILE" EXIT
+
+ZGW_BACKUP_DIR=$(mktemp -d)
+ 
+#create the communication file 
+touch $COMM_FILE || {
+  echo "Unable to create Communication file"
+  exit 1
+}
+
+if [[ ! -x  $ZW_NVM_CONVERTER ]]
+then
+   echo "$ZW_NVM_CONVERTER is not a valid path for zw_nvm_converter"
+   exit 1
+fi
+
+#check if we can even make a manifest file in the backup directory we had
+MANIFEST_FILE="$ZGW_BACKUP_DIR/manifest"
+touch "$MANIFEST_FILE"
+if [[ ! -f $MANIFEST_FILE ]]
+then
+   echo "Can not create manifest file"
+   exit 1
+fi
+
+#Zipgateway expects PID of this script and path where backup should be saved.
+echo "$$ $ZGW_BACKUP_DIR/" >  $COMM_FILE 
+echo "sending SIGUSR1 signal to gateway"
+kill -SIGUSR1 $ZGW_PID || {
+  echo "Sending signal to GW failed"
+  exit 1
+}
+
+while true
+do
+  sleep 1
+done

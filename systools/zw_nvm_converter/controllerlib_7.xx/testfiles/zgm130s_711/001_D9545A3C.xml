@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-16"?>
+<ConfigurationItem AppVersion="5.39.443">
+  <PreKitting>
+    <ProvisioningList />
+  </PreKitting>
+  <ViewSettings>
+    <IMAView UseNetworkBackgroundColor="false" />
+    <SecurityView IsTabS0Selected="false" />
+    <EncryptDecryptView IsTabS0Selected="false" />
+  </ViewSettings>
+  <SecuritySettings>
+    <NetworkKey Class="7" />
+    <NetworkKey Class="0" />
+    <NetworkKey Class="1" />
+    <NetworkKey Class="2" />
+    <TestS2Settings>
+      <Parameters />
+      <Frames />
+      <Extensions />
+      <IsActive>false</IsActive>
+    </TestS2Settings>
+    <TestS0Settings>
+      <IsActive>false</IsActive>
+    </TestS0Settings>
+  </SecuritySettings>
+  <Node Id="1" NodeInfo="D39601020201" CommandClasses="5E86727A7322855970565A989F6C557A74">
+    <SecurityExtension Keys="0x87" CommandClasses="86727359857A" />
+  </Node>
+</ConfigurationItem>

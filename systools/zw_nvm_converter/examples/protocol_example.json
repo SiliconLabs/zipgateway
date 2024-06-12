@@ -1,0 +1,68 @@
+{
+    "backupInfo" : {
+       "backupFormatVersion" : 1,
+       "sourceProtocolVersion" : "6.80.02",
+       "date" : "2014-01-01T23:28:56.782Z"
+    },
+    "zwController" : {
+        "nodeID": 1,
+        "ownHomeID": "0xCAFEBABE",
+        "learnedHomeID": "0xDEADBEEF",
+        "cmdClassList": [ 1,42,63,2 ],
+        "appData" : [],
+        "SUCid" : 0,
+        "virtualNodes": [],       
+        "systemState":0,
+        "controllerConfiguration" : 8,
+        "pendingDiscovery": [],
+        "pendingUpdate": [],
+        "lastUsedNodeID": 2,
+        "preferredRepeaters": [],
+        "nodeTable" : [
+            {
+                "nodeID": 2,
+                "neighbors": [1],
+                "nodeInfo" : {
+                    "capability": 211,
+                    "security":22,
+                    "reserved":1,
+                    "generic":2,
+                    "specific":1
+                }
+            }
+        ],
+        "sucState" : {
+            "updateNodeList" : [
+                {
+                    "nodeID": 2,
+                    "changeType": 0,    
+                    "nodeInfo:" : 
+                    {
+                        "capability": 211,
+                        "security":22,
+                        "reserved":1,
+                        "generic":2,
+                        "specific":1
+                    }                
+                }
+            ],
+            "controllerList" : [254],
+            "lastIndex" : 1 
+        }
+    },
+    
+    "routeCache": [
+        {
+        "nodeId" : 2,
+        "applock" : false,
+        "LWR" : {
+            "conf" : 254,
+            "repeaters" : [0,0,0,3]    
+        },
+        "NLWR": {
+            "conf" : 0,
+            "repeaters" : [0,0,0,0]    
+        }
+        }
+    ]
+}

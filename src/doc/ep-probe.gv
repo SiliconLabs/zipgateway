@@ -1,0 +1,123 @@
+
+digraph epprobe {
+        INFO [label="PROBE_INFO"]
+        AGGREGATED_ENDPOINTS [label="PROBE_AGGREGATED_ENDPOINTS"]
+        SEC2_C2_INFO [label="PROBE_SEC2_C2_INFO"]
+        SEC0_INFO [label="PROBE_SEC0_INFO"]
+        ZWAVE_PLUS [label="PROBE_ZWAVE_PLUS\nSet Tx scheme auto"]
+        MDNS_PROBE [label="MDNS_PROBE"]
+        MDNS_PROBE_IN_PROGRESS [label="MDNS_PROBE_IN_PROGRESS"]
+        DONE [label="PROBE_DONE"]
+        FAIL [label="PROBE_FAIL"]
+
+        AGGREGATED_ENDPOINTS_tx [shape=box, label="Send AggrMembGet"]
+        INFO_tx [shape=box, label = "Send MultiChnlCapGet"]
+        ZWAVE_PLUS_tx [shape=box, label="Send ZWavePlus_Info_Get"]
+        SEC2_C2_INFO_tx [shape=box, label="Send S2CmdsSuppGet"]
+        SEC0_INFO_tx [shape=box, label="Send S0CmdsSuppGet"]
+
+        INFO_cb [label="PROBE_INFO_cb"]
+        /*  S2S0CmdsSupp_get [label="Send S0CmdsSuppGet"] */
+        SEC_INFO_cb [label=SecCmdsSuppGet_cb]
+
+
+edge []
+INFO -> INFO_tx
+
+edge []
+AGGREGATED_ENDPOINTS -> AGGREGATED_ENDPOINTS_tx
+
+edge []
+ZWAVE_PLUS -> ZWAVE_PLUS_tx
+
+edge [style=dashed, label="Tx OK", decorate=true]
+INFO_tx -> INFO_cb
+ 
+edge [style=solid, label="Tx fail"]
+INFO_tx -> FAIL
+ 
+edge [label="Reply\nnot OK"]
+INFO_cb -> FAIL
+
+edge [label="Has aggr eps"]
+INFO_cb -> AGGREGATED_ENDPOINTS
+
+edge [label="No aggr eps"]
+INFO_cb -> SEC2_C2_INFO
+ 
+edge [style=dashed, label="Tx OK"]
+AGGREGATED_ENDPOINTS_tx -> AGGREGATED_ENDPOINTS_cb
+
+edge [style=solid, label="Store aggr info"]
+AGGREGATED_ENDPOINTS_cb -> SEC2_C2_INFO
+
+edge [style=solid, label="Tx fail"]
+AGGREGATED_ENDPOINTS_tx -> FAIL
+
+edge [label="Node sec fail\nor\n(S2 node\nand non-sec GW)"]
+SEC2_C2_INFO -> ZWAVE_PLUS
+
+edge [label="Non-S2 node"]
+SEC2_C2_INFO -> SEC0_INFO
+
+edge [label="S2 OK for node\nand S0 GW"]
+SEC2_C2_INFO -> SEC0_INFO
+
+edge [label="S2 OK for node\nand S2 GW\nSet Tx scheme=auto"]
+SEC2_C2_INFO -> SEC2_C2_INFO_tx
+
+edge [style=dashed, label="Tx OK"]
+SEC2_C2_INFO_tx -> SEC_INFO_cb
+
+edge [style = solid, label="Tx fail"]
+SEC2_C2_INFO_tx -> FAIL
+
+edge [label="Reply OK\nstate==PROBE_SEC2_C2\nSet ep S2 cmds"]
+SEC_INFO_cb -> ZWAVE_PLUS
+
+edge [label="Reply OK\nstate==PROBE_SEC0\nSet ep S0 cmds"]
+SEC_INFO_cb -> ZWAVE_PLUS
+
+edge [label="Reply not OK\nstate==PROBE_SEC2_C2"]
+SEC_INFO_cb -> SEC0_INFO
+
+edge [label="Reply not OK\nstate==PROBE_SEC0"]
+SEC_INFO_cb -> ZWAVE_PLUS
+
+edge [label="S0 Node\nSet Tx scheme=S0"]
+SEC0_INFO -> SEC0_INFO_tx
+
+edge [label="non-Sec Node\nor non-Sec GW"]
+SEC0_INFO -> ZWAVE_PLUS
+
+edge [style=dashed, label="Tx OK"]
+SEC0_INFO_tx -> SEC_INFO_cb
+
+edge [style=solid, label="Tx fail"]
+SEC0_INFO_tx -> FAIL
+
+edge [style=dashed, label="Tx OK"]
+ZWAVE_PLUS_tx -> ZWAVE_PLUS_cb
+
+edge [style=solid, label="Tx fail"]
+ZWAVE_PLUS_tx -> FAIL
+
+edge [label="Reply OK"]
+ZWAVE_PLUS_cb -> MDNS_PROBE
+
+edge [label="Reply not OK"]
+ZWAVE_PLUS_cb -> FAIL
+
+edge [label="MDNS not busy"]
+MDNS_PROBE -> MDNS_PROBE_IN_PROGRESS
+
+edge [label="MDNS busy"]
+MDNS_PROBE -> DONE
+
+edge [label="mdns probe status not OK"]
+MDNS_PROBE_IN_PROGRESS -> MDNS_PROBE
+
+edge [label="mdns probe status OK"]
+MDNS_PROBE_IN_PROGRESS -> DONE
+
+}

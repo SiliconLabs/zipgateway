@@ -1,0 +1,371 @@
+/**
+ * \defgroup epgw_probe Endpoint Probe Machine for the Gateways Endpoint 0
+ *
+ * \ingroup rd_sms
+ *
+ *  \brief The probe machine for endpoint 0 of the gateway itself.
+ *
+ 
+\dot "Resource Directory State Machine for Gateway Endpoint 0 Probing."
+digraph epgwprobe {
+        INFO [label="PROBE_INFO", URL="\ref EP_STATE_PROBE_INFO", penwidth=2]
+        MDNS_PROBE [label="MDNS_PROBE", URL="\ref EP_STATE_MDNS_PROBE"]
+        MDNS_wait [label="Wait for\nmDNS State Machine", 
+                   URL="\ref EP_STATE_MDNS_PROBE_IN_PROGRESS", color=green, 
+                   shape=box]
+# MDNS_PROBE_IN_PROGRESS [label="MDNS_IN_PROGRESS", URL="\ref EP_STATE_MDNS_PROBE_IN_PROGRESS"]
+        DONE [label="PROBE_DONE", URL="\ref EP_STATE_PROBE_DONE", penwidth=2]
+# FAIL [label="PROBE_FAIL", URL="\ref EP_STATE_PROBE_FAIL", penwidth=2]
+
+# MDNS_PROBE_cb [label="MDNS_timer_wait", URL="ep_probe_update_timer", color=blue]
+
+edge [label="Set ep info from GW IPNIF"]
+INFO -> MDNS_PROBE
+
+FAIL[style=invis]
+edge [label="Out of memory"]
+INFO -> FAIL[arrowhead=tee]
+
+###### MDNS ######
+
+edge [label="mDNS idle\nStart mDNS probe", color=black,
+      URL="\ref mdns_endpoint_name_probe"]
+MDNS_PROBE -> MDNS_wait
+MDNS_PROBE -> DONE [label="mDNS busy", style=solid, color=""]
+
+MDNS_wait -> DONE [label="mDNS probe status OK", style=dashed]
+}
+\enddot
+*/
+
+
+/**
+ * \defgroup ep0_probe Endpoint Probe Machine for Root Device
+ *
+ * \ingroup rd_sms
+ *
+ * The probe machine for endpoint 0 of a node.  Endpoint 0 represents
+ * the root device, ie, the node itself.
+ *
+\dot "Resource Directory State Machine for Node Endpoint Probing."
+digraph ep0probe {
+        INFO [label="PROBE_INFO", URL="\ref EP_STATE_PROBE_INFO", penwidth=2]
+        SEC2_C2_INFO [label="PROBE_S2_C2", URL="\ref EP_STATE_PROBE_SEC2_C2_INFO"]
+        SEC2_C1_INFO [label="PROBE_S2_C1", URL="\ref EP_STATE_PROBE_SEC2_C1_INFO"]
+        SEC2_C0_INFO [label="PROBE_S2_C0", URL="\ref EP_STATE_PROBE_SEC2_C0_INFO"]
+        SEC0_INFO [label="PROBE_SEC0", URL="\ref EP_STATE_PROBE_SEC0_INFO"]
+        ZWAVE_PLUS [label="PROBE_ZWAVE_PLUS",
+                   URL="\ref EP_STATE_PROBE_ZWAVE_PLUS"]
+        MDNS_PROBE [label="MDNS_PROBE", URL="\ref EP_STATE_MDNS_PROBE"]
+        MDNS_wait [label="Wait for\nmDNS State Machine", 
+                   URL="\ref EP_STATE_MDNS_PROBE_IN_PROGRESS", color=green, 
+                   shape=box]
+# MDNS_PROBE_IN_PROGRESS [label="MDNS_IN_PROGRESS", URL="\ref EP_STATE_MDNS_PROBE_IN_PROGRESS"]
+        DONE [label="PROBE_DONE", URL="\ref EP_STATE_PROBE_DONE", penwidth=2]
+# FAIL [label="PROBE_FAIL", URL="\ref EP_STATE_PROBE_FAIL", penwidth=2]
+
+        NIF_wait [label="INFO - wait for NIF", URL="\ref rd_nif_request_notify"]
+        INFO_tx [shape=box, label = "Send NIF request"]
+
+        ZWAVE_PLUS_tx [shape=box, label="Send ZWavePlus_Info_Get"]
+        SEC2_C2_INFO_tx [shape=box, label="Send S2CmdsSuppGet"]
+        SEC2_C1_INFO_tx [shape=box, label="Send S2CmdsSuppGet"]
+        SEC2_C0_INFO_tx [shape=box, label="Send S2CmdsSuppGet"]
+        SEC0_INFO_tx [shape=box, label="Send S0CmdsSuppGet"]
+
+        /*  S2S0CmdsSupp_get [label="Send S0CmdsSuppGet"] */
+
+#        SEC_INFO_cb [label="SECURITY_cb", URL="\ref rd_ep_secure_commands_get_callback"]
+        SEC0_INFO_cb [label="S0_cb", URL="\ref rd_ep_secure_commands_get_callback"]
+        SEC2_C2_INFO_cb [label="S2_C2_cb", URL="\ref rd_ep_secure_commands_get_callback",
+                         color=blue]
+        SEC2_C1_INFO_cb [label="S2_C1_cb", URL="\ref rd_ep_secure_commands_get_callback",
+                         color=blue]
+        SEC2_C0_INFO_cb [label="S2_C0_cb", URL="\ref rd_ep_secure_commands_get_callback",
+                         color=blue]
+
+        ZWAVE_PLUS_cb [label="ZWAVE_PLUS_cb\nStore ZW+ info",
+                       URL="\ref rd_ep_zwave_plus_info_callback",
+                       color=blue]
+
+# MDNS_PROBE_cb [label="MDNS_timer_wait", URL="ep_probe_update_timer", color=blue]
+
+
+edge [style=solid, decorate=true, color=""]
+INFO -> INFO [label="nif_req_ep is busy"]
+INFO -> INFO_tx [label="Set nif_req_ep"]
+
+INFO_tx -> NIF_wait [label="Tx OK and node is FLIRS\nStart 1550ms timer", color=blue]
+INFO_tx -> NIF_wait [label="Tx OK and node is not FLIRS\nStart 250ms timer", color=blue]
+FAIL1 [style=invis]
+INFO_tx -> FAIL1 [label="Tx fail\nUnset nif_req_ep", color=blue, arrowhead=tee]
+
+FAIL2[style=invis]
+NIF_wait -> FAIL2[style=dashed, label="Timeout\nUnset nif_req_ep", 
+                  URL="\ref node_info_request_timeout", color=red, arrowhead=tee]
+FAIL3[style=invis]
+NIF_wait -> FAIL3[style=dashed, label="NIF recv fail\nUnset nif_req_ep\nstop timer", 
+                  URL="\ref node_info_request_timeout", color=blue, arrowhead=tee]
+
+NIF_wait -> SEC2_C2_INFO [style=dashed,
+                          label="NIF recvd OK\nUnset nif_req_ep\nstop timer\nstore info\nAdjust security",
+                          URL="\ref node_info_request_timeout", color=blue]
+
+SEC2_C2_INFO -> ZWAVE_PLUS [label="Sec flag BAD is set"]
+SEC2_C2_INFO -> SEC0_INFO [label="CC_S2 not supp by node"]
+SEC2_C2_INFO -> SEC2_C2_INFO_tx [label="S2_C2 flag set on GW\nSet scheme=S2_ACCESS"]
+SEC2_C2_INFO -> SEC2_C1_INFO [label="S2_C2 flag not set on GW"]
+
+SEC2_C1_INFO -> SEC2_C1_INFO_tx [label="S2_C1 flag is set on GW\nSet scheme=S2_AUTH"]
+SEC2_C1_INFO -> SEC2_C0_INFO [label="S2_C1 flag not set on GW"]
+
+SEC2_C0_INFO -> SEC2_C0_INFO_tx [label="S2_C0 flag set on GW\nSet scheme=S2_UNAUTH"]
+SEC2_C0_INFO -> SEC0_INFO [label="S2_C0 flag not set on GW"]
+
+SEC0_INFO -> ZWAVE_PLUS [label="CC_S0 not supp in node\nor S0 flag not set on GW", color=""]
+SEC0_INFO -> SEC0_INFO_tx [label="CC_S0 supp in node\nand S0 flag set on GW"]
+
+SEC2_C0_INFO_tx -> SEC2_C0_INFO_cb [style=dashed, label="Tx OK", color=blue]
+FAIL4[style=invis]
+SEC2_C0_INFO_tx -> FAIL4 [arrowhead=tee, label="Tx fail", color=blue]
+
+SEC2_C1_INFO_tx -> SEC2_C1_INFO_cb [style=dashed, label="Tx OK", color=blue]
+FAIL5[style=invis]
+SEC2_C1_INFO_tx -> FAIL5 [label="Tx fail", color=blue, arrowhead=tee]
+
+SEC2_C2_INFO_tx -> SEC2_C2_INFO_cb [style=dashed, label="Tx OK", color=blue]
+FAIL6[style=invis]
+SEC2_C2_INFO_tx -> FAIL6 [label="Tx fail", color=blue, arrowhead=tee]
+
+SEC0_INFO_tx -> SEC0_INFO_cb [style=dashed, label="Tx OK", color=blue]
+FAIL7[style=invis]
+SEC0_INFO_tx -> FAIL7[style=solid, label="Tx fail", color=blue, arrowhead=tee]
+
+edge [label="Reply OK\nStore ep S2_C2 cmds\nSet S2_C2 flag", color=blue, arrowhead=normal]
+SEC2_C2_INFO_cb -> SEC2_C1_INFO
+edge [label="Reply OK\nStore ep S2_C1 cmds\nSet S2_C1 flag", color=blue]
+SEC2_C1_INFO_cb -> SEC2_C0_INFO
+edge [label="Reply OK\nStore ep S2_C0 cmds\nSet S2_C0 flag", color=blue]
+SEC2_C0_INFO_cb -> SEC0_INFO
+edge [label="Reply OK\nStore ep S0 cmds\nSet S0 flag", color=blue]
+SEC0_INFO_cb -> ZWAVE_PLUS
+
+edge [label="Reply not OK\nNode is new and added by SUC\nClear S2_C2 flag",
+     color=blue]
+SEC2_C2_INFO_cb -> SEC2_C1_INFO
+edge [label="Reply not OK\nNode is new and added by SUC\nClear S2_C1 flag",
+     color=blue]
+SEC2_C1_INFO_cb -> SEC2_C0_INFO
+edge [label="Reply not OK\nNode is new and added by SUC\nClear S2_C0 flag",
+     color=blue]
+SEC2_C0_INFO_cb -> SEC0_INFO
+edge [label="Reply not OK\nNode is new and added by SUC\nClear S0 flag",
+     color=blue]
+SEC0_INFO_cb -> ZWAVE_PLUS
+
+edge [label="CC_ZW+ support\nSet scheme=auto"]
+ZWAVE_PLUS -> ZWAVE_PLUS_tx
+edge [label="No CC_ZW+ support"]
+ZWAVE_PLUS -> MDNS_PROBE
+
+ZWAVE_PLUS_tx -> ZWAVE_PLUS_cb [style=dashed, label="Tx OK", color=blue]
+FAIL8[style=invis]
+ZWAVE_PLUS_tx -> FAIL8 [style=solid, label="Tx fail", color=blue, arrowhead=tee]
+
+edge [label="Reply OK\nStore icons\nSet portable", color=blue, arrowhead=normal]
+ZWAVE_PLUS_cb -> MDNS_PROBE
+edge [label="Reply not OK", color=blue]
+ZWAVE_PLUS_cb -> MDNS_PROBE[arrowhead=tee]
+
+###### MDNS ######
+
+edge [label="mDNS idle\nStart mDNS probe", color=black,
+      URL="\ref mdns_endpoint_name_probe"]
+MDNS_PROBE -> MDNS_wait
+MDNS_PROBE -> DONE [label="mDNS busy", style=solid, color=""]
+
+MDNS_wait -> DONE [label="mDNS probe status OK", style=dashed]
+}
+\enddot
+*/
+
+/**
+ * \defgroup epgt0_probe Endpoint Probe Machine for "Proper" Multi-Channel Endpoints
+ * \ingroup rd_sms
+ *
+ * \brief The probe state machine for proper endpoints, ie, not the node itself.
+ *
+ * This section describes the probe machine for endpoints with id > 0.
+ *
+ * As an abbreviation, "S2 OK for node" means that the node
+ * supports S2 and S2 succeeded.
+
+\dot "Resource Directory State Machine for (Proper) Endpoint Probing."
+digraph epprobe {
+        INFO [label="PROBE_INFO\nSend MultiChnlCapGet",
+              URL="\ref EP_STATE_PROBE_INFO", penwidth=2]
+        AGGREGATED_ENDPOINTS [label="PROBE_AGGREGATED_EPs\nSend AggrMembGet",
+                             URL="\ref EP_STATE_PROBE_AGGREGATED_ENDPOINTS", penwidth=""]
+        SEC2_C2_INFO [label="PROBE_S2_C2", URL="\ref EP_STATE_PROBE_SEC2_C2_INFO"]
+        SEC0_INFO [label="PROBE_SEC0", URL="\ref EP_STATE_PROBE_SEC0_INFO"]
+        ZWAVE_PLUS [label="PROBE_ZWAVE_PLUS",
+                   URL="\ref EP_STATE_PROBE_ZWAVE_PLUS"]
+        MDNS_PROBE [label="MDNS_PROBE", URL="\ref EP_STATE_MDNS_PROBE"]
+        MDNS_wait [label="Wait for\nmDNS State Machine", 
+                   URL="\ref EP_STATE_MDNS_PROBE_IN_PROGRESS", color=green, 
+                   shape=box]
+
+        DONE [label="PROBE_DONE", URL="\ref EP_STATE_PROBE_DONE", penwidth=2]
+#        FAIL [label="PROBE_FAIL", URL="\ref EP_STATE_PROBE_FAIL", penwidth=2]
+
+        ZWAVE_PLUS_tx [shape=box, label="Send ZWavePlus_Info_Get"]
+        SEC2_C2_INFO_tx [shape=box, label="Send S2CmdsSuppGet"]
+        SEC0_INFO_tx [shape=box, label="Send S0CmdsSuppGet"]
+
+        INFO_cb [label="INFO_wait", URL="\ref rd_ep_capability_get_callback",
+                         color=blue]
+
+        /*  S2S0CmdsSupp_get [label="Send S0CmdsSuppGet"] */
+
+        AGGREGATED_ENDPOINTS_cb [label="AGGREGATED_EPs_cb\nStore aggr info"
+                             URL="\ref rd_ep_aggregated_members_get_callback",
+                         color=blue]
+
+        SEC2_INFO_cb [label="SECURITY_cb", URL="\ref rd_ep_secure_commands_get_callback",
+                         color=blue]
+
+        SEC0_INFO_cb [label="SECURITY_cb", URL="\ref rd_ep_secure_commands_get_callback",
+                         color=blue]
+
+        ZWAVE_PLUS_cb [label="ZWAVE_PLUS_cb\nStore ZW+ info",
+                       URL="\ref rd_ep_zwave_plus_info_callback",
+                         color=blue]
+
+edge [decorate=true]
+
+INFO -> INFO_cb [style=dashed, label="Tx OK", color=blue]
+FAIL[style=invis]
+INFO -> FAIL[arrowhead=tee, style=solid, label="Tx fail", color=blue]
+
+edge [label="ZW+ support"]
+ZWAVE_PLUS -> ZWAVE_PLUS_tx
+
+edge [label="No ZW+ support"]
+ZWAVE_PLUS -> MDNS_PROBE
+
+FAIL1[style=invis]
+edge [label="Reply\nnot OK", color=blue]
+INFO_cb -> FAIL1[arrowhead=tee]
+
+edge [label="Store info\nHas aggr eps", color=""]
+INFO_cb -> AGGREGATED_ENDPOINTS
+
+edge [label="Store info\nNo aggr eps"]
+INFO_cb -> SEC2_C2_INFO
+
+edge [style=dashed, label="Tx OK", color=blue]
+AGGREGATED_ENDPOINTS -> AGGREGATED_ENDPOINTS_cb
+FAIL2[style=invis]
+AGGREGATED_ENDPOINTS -> FAIL2[arrowhead=tee, style=solid, label="Tx fail", color=blue]
+
+edge [style=solid, color="", label=""]
+AGGREGATED_ENDPOINTS_cb -> SEC2_C2_INFO
+
+edge [label="Node sec fail", color=""]
+SEC2_C2_INFO -> ZWAVE_PLUS
+
+edge [label="Non-S2 node\nor\n(S2 node\nand non-S2 GW)"]
+SEC2_C2_INFO -> SEC0_INFO
+
+edge [label="S2 OK for node\nand S2 GW"]
+SEC2_C2_INFO -> SEC2_C2_INFO_tx
+
+edge [style=dashed, label="Tx OK", color=blue]
+SEC2_C2_INFO_tx -> SEC2_INFO_cb
+
+FAIL3[style=invis]
+edge [style = solid, label="Tx fail", color=blue]
+SEC2_C2_INFO_tx -> FAIL3[arrowhead=tee]
+
+edge [label="Reply OK\nStore ep S2 cmds", color=blue]
+SEC2_INFO_cb -> ZWAVE_PLUS
+
+edge [label="Reply OK\nStore ep S0 cmds", color=blue]
+SEC0_INFO_cb -> ZWAVE_PLUS
+
+edge [label="Reply not OK", color=blue]
+SEC2_INFO_cb -> ZWAVE_PLUS
+
+edge [label="Reply not OK", color=blue]
+SEC0_INFO_cb -> ZWAVE_PLUS
+
+edge [label="non-Sec Node\nor sec fail on node\nor non-Sec GW", color=""]
+SEC0_INFO -> ZWAVE_PLUS
+
+edge [label="S0 Node"]
+SEC0_INFO -> SEC0_INFO_tx
+
+edge [style=dashed, label="Tx OK", color=blue]
+SEC0_INFO_tx -> SEC0_INFO_cb
+
+FAIL4[style=invis]
+edge [style=solid, label="Tx fail", color=blue]
+SEC0_INFO_tx -> FAIL4[arrowhead=tee]
+
+edge [style=dashed, label="Tx OK", color=blue]
+ZWAVE_PLUS_tx -> ZWAVE_PLUS_cb
+
+FAIL5[style=invis]
+edge [style=solid, label="Tx fail", color=blue]
+ZWAVE_PLUS_tx -> FAIL5[arrowhead=tee]
+
+edge [label="Reply OK", color=blue]
+ZWAVE_PLUS_cb -> MDNS_PROBE
+
+edge [label="Reply not OK", color=blue]
+ZWAVE_PLUS_cb -> MDNS_PROBE[arrowhead=tee]
+
+###### MDNS ######
+
+edge [label="mDNS idle\nStart mDNS probe", color=black,
+      URL="\ref mdns_endpoint_name_probe"]
+MDNS_PROBE -> MDNS_wait
+MDNS_PROBE -> DONE [label="mDNS busy", style=solid, color=""]
+
+MDNS_wait -> DONE [label="mDNS probe status OK", style=dashed]
+}
+\enddot
+*/
+
+/**
+ *
+ * \defgroup rd_ep_mdns Endpoint mDNS Probe Machine
+ * * \ingroup rd_sms
+ *
+ * \brief The Resource Directory part of the mDNS endpoint probing.
+ *
+\dot "Resource Directory State Machine for Endpoint mDNS Probing."
+digraph epprobe {
+###### MDNS ######
+
+MDNS_PROBE [label="MDNS_PROBE", URL="\ref EP_STATE_MDNS_PROBE"]
+MDNS_PROBE_IN_PROGRESS [label="MDNS_IN_PROGRESS", URL="\ref EP_STATE_MDNS_PROBE_IN_PROGRESS"]
+DONE [label="PROBE_DONE", URL="\ref EP_STATE_PROBE_DONE", penwidth=2]
+MDNS_PROBE_cb [label="MDNS_timer_wait", URL="ep_probe_update_timer", color=blue]
+
+edge [label="mDNS idle\nStart mDNS probe", color=black,
+      URL="\ref mdns_endpoint_name_probe"]
+MDNS_PROBE -> MDNS_PROBE_IN_PROGRESS
+MDNS_PROBE -> DONE [label="mDNS busy", style=solid, color=""]
+
+MDNS_PROBE_IN_PROGRESS -> DONE [label="mDNS probe status OK", style=dashed]
+edge [label="mDNS probe status not OK\nAdjust ep name\nStart timer",
+     URL="rd_endpoint_name_probe_done", style=dashed]
+MDNS_PROBE_IN_PROGRESS -> MDNS_PROBE_cb
+
+edge [label="EP mDNS timeout", URL="\ref ep_probe_update_timer", color=red, style=dashed]
+MDNS_PROBE_cb -> MDNS_PROBE
+
+}
+\enddot
+ */

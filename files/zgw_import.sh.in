@@ -1,0 +1,211 @@
+#!/bin/bash
+# © 2020 Silicon Laboratories Inc.
+#
+# This script may be used to migrate an existing non zipgateway controller to a 
+# zip gateway or for recovring a lost node database.
+# 
+# There are two basic modes of this script, an online mode and an offline mode.
+#
+# In the online mode the script performs two tasks. 
+# 1) It makes sure that the Z-Wave controller module attached to this device is 
+#    updated to a bridge controller.
+# 2) It will import network informaion from the legacy gateway into the zip 
+#    gateway.
+#
+# In the offline mode, connection to the serial module is not a requirement
+# but the controller module must be a bridge controler that has been running 
+# with a zipgateway before. In the offline mode, additional fields are required
+# in the json file and security keys from the json file will not be programmed.
+#
+# If the import is sucsessfull the zipgateway may be started after running this 
+# sciprt.
+#
+# It is a prerequisite that the zipgateway.cfg exists and has been properly set 
+# up.
+#
+
+PROGRAMMER="@CMAKE_INSTALL_PREFIX@/bin/zw_programmer"
+ZGWRESTORE="@CMAKE_INSTALL_PREFIX@/bin/zgw_restore"
+NVMCONVERTER="@CMAKE_INSTALL_PREFIX@/bin/zw_nvm_converter"
+GWCFG="@CMAKE_INSTALL_PREFIX@/etc/zipgateway.cfg"
+TARGET_FIRMWARE="@CMAKE_INSTALL_PREFIX@/share/zipgateway/serialapi_controller_bridge_OTW_ZW050x_EU_WITH_BOOTLOADER.hex"
+TARGET_FIRMWARE_VERSION="bridge6.8"
+OFFLINE=0
+
+[ -x "${PROGRAMMER}" ] || { 
+    echo "zw_programmer not found in ${PROGRAMMER}" 
+    exit 1 
+}
+
+[ -x "${ZGWRESTORE}" ] || { 
+    echo "zgw_restore not found ${ZGWRESTORE}" 
+    exit 1 
+}
+
+[ -x "${NVMCONVERTER}" ] || { 
+    echo "zw_nvm_converter not found ${NVMCONVERTER}" 
+    exit 1 
+}
+
+nvm_json_backup() {
+    JSON_FILE=$1
+    NVM_SRC=`mktemp -t nvm_srcXXX`
+
+    ${PROGRAMMER} -r ${NVM_SRC} -s ${SERIAL_PORT} || {
+        echo "Error reading the protocol NVM"
+        exit 1
+    }
+
+    ${NVMCONVERTER} -e ${PROTOCOL_VERSION_SHORT} ${NVM_SRC} ${JSON_FILE} || {
+        echo "Unable to convert Z-Wave nvm. Maybe NVM is corrupted?"
+        echo "NVM file is: ${NVM_SRC}"
+        exit 1
+    }
+    rm -f ${NVM_SRC}
+}
+
+nvm_binary_backup() {
+    NVM_SRC=$1
+
+    ${PROGRAMMER} -r ${NVM_SRC} -s ${SERIAL_PORT} || {
+        echo "Error reading the protocol NVM"
+        exit 1
+    }
+}
+
+nvm_json_restore() {
+    JSON_FILE=$1
+
+    NVM_DST=`mktemp -t nvm_dstXXX`
+
+    ${NVMCONVERTER} -i ${TARGET_FIRMWARE_VERSION} ${JSON_FILE} ${NVM_DST} || {
+        echo "Unable to convert NVM to ${TARGET_FIRMWARE_VERSION}. This should not happen."
+        exit 1
+    }
+
+    ${PROGRAMMER} -w ${NVM_DST} -s ${SERIAL_PORT} || {
+        echo "Error writing the protocol NVM"
+        exit 1
+    }
+    rm -f ${NVM_DST}
+}
+
+nvm_binary_restore() {
+    NVM_DST=$1
+
+    ${PROGRAMMER} -w ${NVM_DST} -s ${SERIAL_PORT} || {
+        echo "Error writing the protocol NVM"
+        exit 1
+    }
+}
+
+do_firmware_update() {
+    NVM_TMP_FILE=`mktemp -t tmpXXX`
+
+    if [[ ${PROTOCOL_VERSION_SHORT:6}>"7.15" ]]; then
+      nvm_binary_backup ${NVM_TMP_FILE}
+    else
+      nvm_json_backup ${NVM_TMP_FILE}
+    fi
+    ${PROGRAMMER} -p ${TARGET_FIRMWARE} -s ${SERIAL_PORT} || {
+        echo "Firmware flashing failed. This is not good."
+        exit 1
+    }
+    if [[ ${PROTOCOL_VERSION_SHORT:6}>"7.15" ]]; then
+      nvm_binary_restore ${NVM_TMP_FILE}
+    else
+      nvm_json_restore ${NVM_TMP_FILE}
+    fi
+
+    rm -f ${NVM_TMP_FILE}
+}
+
+
+print_help() {    
+    echo "Usage: $0 -s <serial dev> -f <target_firmware> -p <protocol_name> -j <json_file>"
+    echo "   -s <serial dev>      : device file to which the Z-Wave controller is attached, defualts to the setting in zipgateway.cfg"
+    echo "   -f <target_firmware> : hex or gbl file of the bridge controller firmware to be flashed on the module"
+    echo "   -p <protocol_name>   : name of the protocol which the firmware file implements e.g. ${TARGET_FIRMWARE_VERSION}"
+    echo "   -j <json_file>       : json file which contain the import data"
+    echo "   -o                   : offline mode no firmware update will be attempted"
+    exit 1
+}
+
+#Try to get the serial port name from the zipgateway.cfg
+[ -f ${GWCFG} ] && {
+    eval `grep ZipSerialAPIPortName ${GWCFG} | sed -E "s/[[:space:]]+//g"`
+    SERIAL_PORT=${ZipSerialAPIPortName}
+}
+
+while getopts "os:p:f:j:" o; do
+    case "${o}" in
+        s)
+            SERIAL_PORT=${OPTARG}
+            ;;
+        p)
+            TARGET_FIRMWARE_VERSION=${OPTARG}
+            ;;
+        j)
+            IMPORT_JSON=${OPTARG}
+            ;;
+        f)
+            TARGET_FIRMWARE=${OPTARG}
+            ;;
+        o)
+            OFFLINE=1
+            ;;
+        *)
+            print_help
+            ;;
+    esac
+done
+
+
+[ -f "${IMPORT_JSON}" ] || { 
+    echo "import json file was not found."
+    print_help
+}
+
+if [ ${OFFLINE} -eq 0 ]; then
+  [ -f "${TARGET_FIRMWARE}" ] || { 
+      echo "target firmware ${TARGET_FIRMWARE} file not found"
+      print_help
+  }
+
+  PROTOCOL_VERSION_FULL=`${PROGRAMMER} -t -s ${SERIAL_PORT}| grep "NVM:"` || {
+      echo "Unable to connect to existing controller on device ${SERIAL_PORT}. Please check your serial path."
+      exit 1
+  }
+  PROTOCOL_VERSION_SHORT=${PROTOCOL_VERSION_FULL#*NVM: }
+
+  echo "Current controller firmware is ${PROTOCOL_VERSION_SHORT}"
+  echo "The target firmware is ${TARGET_FIRMWARE_VERSION}"
+
+  #Check if we need to update the controller firmware 
+  if [[ "$PROTOCOL_VERSION_SHORT" != "$TARGET_FIRMWARE_VERSION" ]] || [[ "$TARGET_FIRMWARE_VERSION" == "bridge7.15" ]]; then
+      echo "Old firmware version detected, upgrading firmware"
+      do_firmware_update
+      #We need to wait for the module to come up again after writing the NVM.
+      sleep 3
+  fi 
+
+  ${ZGWRESTORE} -s ${SERIAL_PORT} -j ${IMPORT_JSON} || {
+      echo "The gateway import failed."
+      exit 1
+  }
+else
+  echo "Performing offline import"
+  ${ZGWRESTORE} -o -j ${IMPORT_JSON} || {
+      echo "The gateway import failed."
+      exit 1
+  }
+fi
+
+echo "Import was sucsessfull. The Z/IP gateway may now be started."
+exit 0
+
+
+
+
+
+

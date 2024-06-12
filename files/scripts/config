@@ -1,0 +1,47 @@
+#!/bin/bash
+set -e
+. /usr/share/debconf/confmodule
+
+ETH=$(ip route show to 0.0.0.0/0|awk '{print $5}' | head -1)
+#echo "config script: ${1}"
+db_capb backup
+
+db_beginblock
+db_input critical zipgateway/serial_port || true
+db_input critical zipgateway/zip_lan_ip6 || true
+db_input critical zipgateway/zip_pan_ip6 || true
+db_input critical zipgateway/enable_wlan || true 
+db_endblock
+if ! db_go ; then
+    exit 10
+fi
+options=""
+for interface in $(ip link show | awk '/^[0-9]/ {print $2;} ' | sed 's/:$//');
+    do
+        if [ $interface != "lo" ] && [ $interface != "" ] && [ $interface != "br-lan" ];
+        then
+            options="$options $interface,";
+        fi
+    done
+
+options="${options::-1}"
+#echo $options
+   
+db_get zipgateway/enable_wlan
+ENABLE_WLAN="$RET"
+if [ "$ENABLE_WLAN" = "wireless" ]; then #Wireless configuration
+    db_subst zipgateway/wlan choices $options
+    db_input critical zipgateway/wlan || true   
+    if ! db_go ; then
+        exit 10
+    fi
+else
+    ## Get interfaces from the operating system
+    db_subst zipgateway/bridge_port choices $options
+    db_input critical zipgateway/bridge_port || true
+    if ! db_go ; then
+        exit 10
+    fi
+fi
+db_input critical zipgateway/restart_nw || true
+db_go || true

@@ -1,0 +1,180 @@
+#!/bin/sh -e
+set -e
+# Source debconf library.
+. /usr/share/debconf/confmodule
+
+GW_CONFFILE=/usr/local/etc/zipgateway.cfg
+
+# Find default interface
+ETH=$(ip route show to 0.0.0.0/0|awk '{print $5}' | head -1)
+
+#echo "postinst script"
+db_get zipgateway/serial_port
+PORT="$RET"
+if [ "$RET" = "" ]; then
+	PORT="/dev/ttyACM0"
+fi
+sed -i "/ZipSerialAPIPortName*/d" $GW_CONFFILE 
+echo ZipSerialAPIPortName=$PORT >> $GW_CONFFILE
+
+db_get zipgateway/zip_lan_ip6
+LAN="$RET"
+if [ "$RET" = "" ]; then
+	LAN="fd00:aaaa::3"
+fi
+sed -i "/ZipLanIp6*/d" $GW_CONFFILE 
+echo ZipLanIp6=$LAN >> $GW_CONFFILE
+
+db_get zipgateway/zip_pan_ip6
+PAN="$RET"
+if [ "$RET" = "" ]; then
+	PAN="fd00:bbbb::1"
+fi
+sed -i "/ZipPanIp6*/d" $GW_CONFFILE 
+echo ZipPanIp6=$PAN >> $GW_CONFFILE
+
+db_get zipgateway/enable_wlan
+ENABLE_WLAN="$RET"
+
+update-rc.d zipgateway defaults
+mandb > /dev/null 2>&1 || { echo >&2 "mandb command not found. Z/IP Ggateway manual might not be available";}
+
+if [ -f /etc/init.d/wicd ]
+then
+    update-rc.d wicd remove
+fi
+
+if [ "$ENABLE_WLAN" = "wireless" ]; then #Wireless configuration
+    #echo "Wireless configuration"
+    db_get zipgateway/wlan
+    WLAN="$RET"
+    if [ "$RET" = "" ]; then
+    	WLAN="wlan0"
+    fi
+
+    ifconfig $WLAN > /dev/null 2>&1 || {
+        echo "Error: Interface ${WLAN} not found"
+        exit 1
+    }    
+
+    pidof dnsmasq > /dev/null 2>&1 && {
+        systemctl disable dnsmasq > /dev/null 2>&1 || true
+    }
+    systemctl enable radvd > /dev/null 2>&1
+
+
+    if [ -f /etc/network/interfaces.d/br-lan ]
+    then
+        rm /etc/network/interfaces.d/br-lan
+    fi
+
+    sed -i "s/^WLAN=.*/WLAN=$WLAN/g" /usr/local/etc/zipgateway.tun
+    sed -i "s/^WLAN=.*/WLAN=$WLAN/g" /etc/init.d/zipgateway
+    sed -i "s/^interface.*/interface $WLAN/g" /etc/radvd.conf
+
+    if [ -f /etc/sysctl.d/30-tap0.conf ]
+    then
+        rm /etc/sysctl.d/30-tap0.conf
+    fi
+
+    if [ -f /etc/sysctl.d/30-zgwifi.conf ]
+    then
+        rm /etc/sysctl.d/30-zgwifi.conf
+    fi
+
+    cat >> /etc/sysctl.d/30-zgwifi.conf <<!EOF
+net.ipv6.conf.${WLAN}.accept_ra=2
+net.ipv6.conf.all.forwarding=1
+!EOF
+
+    sed -i "/*timeout*/d" /etc/dhcp/dhclient.conf
+    sed -i "/timeout*/d" /etc/dhcp/dhclient.conf
+    #echo "Changing dhclient timeout to 5 seconds"
+    echo "timeout 15;" >> /etc/dhcp/dhclient.conf
+
+else #Wired cofiguration
+
+    if [ -f /etc/init.d/connman ]
+    then
+        systemctl disable connman.service 
+    fi
+    #echo "Wired configuration"
+    sed -i "s/^WLAN=.*/WLAN=/g" /usr/local/etc/zipgateway.tun
+    sed -i "s/^WLAN=.*/WLAN=/g" /etc/init.d/zipgateway
+
+    if [ -f /etc/sysctl.d/30-zgwifi.conf ]
+    then
+        rm /etc/sysctl.d/30-zgwifi.conf
+    fi
+
+    if [ -f /etc/sysctl.d/30-tap0.conf ]
+    then
+        rm /etc/sysctl.d/30-tap0.conf
+    fi
+
+    cat >> /etc/sysctl.d/30-tap0.conf <<!EOF
+net.ipv6.conf.tap0.disable_ipv6=1
+!EOF
+
+    systemctl disable radvd > /dev/null 2>&1
+
+    db_get zipgateway/bridge_port
+    ETH_PORT="$RET"
+    if [ "$RET" = "" ]; then
+        ETH_PORT=${ETH}
+    fi
+
+    ifconfig ${ETH}> /dev/null 2>&1 || {
+        echo "Error: Interface ${ETH} not found"
+        exit 1
+    }    
+
+    egrep "source-directory /etc/network/interfaces.d" /etc/network/interfaces > /dev/null || {
+        echo "source-directory /etc/network/interfaces.d" >> /etc/network/interfaces
+    }
+    
+    if [ -f /etc/dhcpcd.conf ]
+    then
+        # This way we make sure we dont add multiple lines of our "noipv6" configuration option
+        # And still do no touch other lines where there is "noipv6". So any interface specific 
+        # "noipv6" configuration will still be there and even global
+        sed -i "/interface tap0 #Added by zipgateway.*/d" /etc/dhcpcd.conf
+        sed -i "/interface br-lan #Added by zipgateway.*/d" /etc/dhcpcd.conf
+        sed -i "/noipv6 #Added by zipgateway.*/d" /etc/dhcpcd.conf
+        echo "interface br-lan #Added by zipgateway" >> /etc/dhcpcd.conf
+        echo "noipv6 #Added by zipgateway " >> /etc/dhcpcd.conf
+        /etc/init.d/dhcpcd restart
+    fi
+
+    if [ -f /etc/network/interfaces.d/br-lan ]
+    then
+        rm /etc/network/interfaces.d/br-lan
+    fi
+
+    cat > /etc/network/interfaces.d/br-lan <<!EOF
+auto br-lan
+iface br-lan inet dhcp 
+  bridge_stp on
+  bridge_ports $ETH_PORT
+  bridge_fd 2
+!EOF
+    cat > /etc/logrotate.d/zipgateway <<!EOF
+"/var/log/zipgateway.log" {
+	rotate 0
+	size 10M 
+	su root root
+	notifempty
+	missingok
+	copytruncate
+}
+!EOF
+
+fi
+
+db_get zipgateway/restart_nw
+if [ "$RET" = "Yes" ]
+then
+    shutdown -r 1 
+fi
+
+db_unregister zipgateway/restart_nw

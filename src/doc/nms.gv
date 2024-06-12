@@ -1,0 +1,95 @@
+
+digraph nms {
+        NM_IDLE [color="", label="NM_IDLE\nMyId=n\nIPv4=addr4"]        
+        NM_LEARN_MODE_C [color=green, label="NM_LEARN_MODE(classic)\nMyId=n\nIPv4=addr4"]        
+        NM_LEARN_MODE_NWI [color=green, label="NM_LEARN_MODE(NWI)\nMyId=n\nIPv4=addr4"]        
+        NM_LM_STARTED [color=green, label="NM_LEARN_MODE_STARTED\nMyId=0\nIPv4=??"]
+        NM_LM_REPLYING [color=green, label="NM_LEARN_MODE\n(wait_for_send_back_fail)\nMyId=n\nIPv4=addr4"]
+        NM_LM_STARTED_REPLYING [color=red, label="NM_LEARN_MODE_STARTED\n(wait_for_send_back_fail)\nMyId=0\nIPv4=??"]
+        NM_WAIT_FOR_SECURE_LEARN [color=black, label="NM_WAIT_FOR_SECURE_LEARN"]
+        NM_WAIT_FOR_MDNS [color=black, label="NM_WAIT_FOR_MDNS"]
+        NM_WAITING_FOR_PROBE [color=black, label="NM_WAITING_FOR_PROBE"]
+        NM_WAIT_FOR_PROBE_BY_SIS [color=black, label="NM_WAIT_FOR_PROBE_BY_SIS"]
+        NM_WAIT_FOR_OUR_PROBE [color=black, label="NM_WAIT_FOR_OUR_PROBE"]
+        NM_SET_DEFAULT [color=black, label=NW_SET_DEFAULT]
+
+
+        LM_NEW_TEST [shape=diamond, label="LEARN_MODE_NEW?"]
+
+        edge [label="USER:\nSET_LEARN_MODE\n(NWI)", color=green, penwidth=2]
+        NM_IDLE -> NM_LEARN_MODE_C;
+
+// learn mode
+        edge [label="CB(LM_STARTED)\nLock probe", color=blue]
+        {NM_LEARN_MODE_C, NM_LEARN_MODE_NWI} -> NM_LM_STARTED;
+
+        edge [label="CB(LM_DONE)"]
+        {NM_LEARN_MODE_C, NM_LEARN_MODE_NWI, NM_LM_STARTED}-> NM_WAIT_FOR_SECURE_LEARN;
+
+        // exclusion
+        edge [label="bSource==0\n&& clean network", color=black]
+        NM_WAIT_FOR_SECURE_LEARN -> "NM_WAIT_FOR_MDNS(clean)";
+        "NM_WAIT_FOR_MDNS(clean)" -> NM_SET_DEFAULT;
+
+        edge [label="NM_EV_MDNS_EXIT\nUnlock probe", color=black, style=dashed]
+        NM_SET_DEFAULT -> NM_WAITING_FOR_PROBE;
+
+        edge [label="CB(LM_FAILED)\nUnlock probe", color=blue, style=""]
+        {NM_LEARN_MODE_C, NM_LEARN_MODE_NWI} -> NM_LM_REPLYING;
+        NM_LM_STARTED -> NM_LM_STARTED_REPLYING;
+
+        edge [label="LM TIMEOUT\n1st", color=red]
+        NM_LEARN_MODE_C -> NM_LEARN_MODE_NWI;
+
+        edge [label="LM TIMEOUT\n2nd-4th", color=red]
+        NM_LEARN_MODE_NWI -> NM_LEARN_MODE_NWI;
+
+        edge [label="LM TIMEOUT\n5th", color=red]
+        NM_LEARN_MODE_NWI -> NM_LM_REPLYING;
+
+        edge [label="LM TIMEOUT", color=red]
+        NM_LM_REPLYING -> NM_LM_REPLYING;
+
+        edge [label="USER:\nLM_DISABLED", color=green]
+        {NM_LEARN_MODE_C, NM_LEARN_MODE_NWI} -> NM_LM_REPLYING;
+//        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_MDNS
+
+
+        edge [label="ZW_SendDataAppl() fails", penwidth=2, color=black]
+        NM_LM_REPLYING -> NM_IDLE;
+        NM_LM_STARTED_REPLYING -> NM_IDLE;
+
+        edge [label="zwave_send() calls\nuip_completedFunc()", penwidth=1, style="dashed", color=black]
+        NM_LM_REPLYING -> NM_IDLE;
+        NM_LM_STARTED_REPLYING -> NM_IDLE;
+
+        edge [label="DTLS timeout??"]
+        NM_LM_STARTED_REPLYING -> NM_IDLE;
+        edge [label="S2 incl_timeout (60s)??"]
+        NM_LM_STARTED_REPLYING -> NM_IDLE;
+
+        edge [label=NM_EV_S0_STARTED, color=black, style="", pensize=2]
+        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_SECURE_LEARN;
+
+        edge [label=NM_EV_ADD_SECURITY_KEY_CHALLENGE, color=black]
+        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_SECURE_LEARN;
+
+        edge [label=NM_EV_SECURITY_DONE, color=black, style=dashed]
+        NM_WAIT_FOR_SECURE_LEARN -> NM_WAIT_FOR_MDNS;
+
+        edge [label=NM_EV_MDNS_EXIT, style=dashed]
+        NM_WAIT_FOR_MDNS -> LM_NEW_TEST;
+        edge [label=yes, style=""]
+        LM_NEW_TEST -> NM_WAIT_FOR_PROBE_BY_SIS;
+        edge [label="no\nUnlock probe\nStart timer\nPOST: ZIP_EVENT_RESET"]
+        LM_NEW_TEST -> NM_WAITING_FOR_PROBE;
+
+        edge [label="TIMEOUT\nPOST: ZIP_EVENT_RESET", color=red]
+        NM_WAIT_FOR_PROBE_BY_SIS -> NM_WAIT_FOR_OUR_PROBE;
+
+        edge [label="NM_EV_FRAME_RECEIVED\n[restart 6s timer]", color=black]
+        NM_WAIT_FOR_PROBE_BY_SIS -> NM_WAIT_FOR_PROBE_BY_SIS;
+
+        edge [label="NM_EV_ALL_PROBED\nUnlock probe", style=dashed, color=black]
+        NM_WAIT_FOR_OUR_PROBE -> NM_WAITING_FOR_PROBE;
+}
