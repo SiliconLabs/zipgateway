@@ -1,0 +1,42 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2006 OpenWrt.org
+
+UDHCPC_PID=/var/run/udhcpc-br-zip.pid
+ZIP_BRIDGE=br-zip
+ETH_INTERFACE=eth1
+UDHCPC_EVENT_SCRIPT=/usr/share/udhcpc/default.script
+START=99
+STOP=99
+
+start() {
+        ifconfig $ETH_INTERFACE | grep "\s*UP" > /dev/null || {
+          ifconfig $ETH_INTERFACE up
+        }
+        brctl show | grep $ZIP_BRIDGE > /dev/null || {
+          brctl addbr $ZIP_BRIDGE
+          ifconfig $ZIP_BRIDGE up
+        }
+        brctl addif $ZIP_BRIDGE $ETH_INTERFACE
+        if [ -f $UDHCPC_PID ] && ps |grep `cat $UDHCPC_PID` > /dev/null
+        then
+          kill -9 `cat $UDHCPC_PID `
+          rm $UDHCPC_PID
+        fi
+        udhcpc -p $UDHCPC_PID -s $UDHCPC_EVENT_SCRIPT -b -t 10 -i $ZIP_BRIDGE -C
+	return 0
+}
+
+stop() {
+        if [ -f $UDHCPC_PID ] && ps |grep `cat $UDHCPC_PID` > /dev/null
+        then
+          kill -9 `cat $UDHCPC_PID `
+          rm $UDHCPC_PID
+        fi
+        if brctl show | grep $ZIP_BRIDGE > /dev/null
+        then
+          brctl delif $ZIP_BRIDGE $ETH_INTERFACE
+          ifconfig $ZIP_BRIDGE down
+          brctl delbr $ZIP_BRIDGE
+        fi
+	return 0
+}

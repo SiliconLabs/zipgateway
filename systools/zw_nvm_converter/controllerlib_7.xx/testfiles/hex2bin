@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# (Very) simple wrapper script simply to remember the objcopy options
+
+if [ $# -ne 2 ]; then
+  echo "Usage: $(basename $0) in_file.hex out_file.bin"
+  exit 1
+fi
+objcopy --input-target=ihex --output-target=binary $1 $2

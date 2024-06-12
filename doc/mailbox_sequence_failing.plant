@@ -1,0 +1,35 @@
+@startuml
+title "Mailbox proxy frame flow."
+actor "Z/IP Client" as zclient 
+participant "Mailbox Proxy" as proxy
+participant "Non-Listening Node" as node
+database "Mailbox Service" as proxyservice
+ 
+zclient --> proxy : Meter Get
+proxy -> node : Meter Get
+...200ms Later...
+proxy --> zclient : NACK Waiting
+node -> proxy : NACK
+proxy --> proxyservice : Queue Push| Origianl IP | Meter Get
+proxyservice --> proxy : ACK
+
+loop 60s repeating loop
+proxyservice --> proxy : Queue Waiting | Origianl IP | Meter Get
+proxy --> zclient : NACK Waiting, time left = XXXX
+
+group Only every 10 min
+proxyservice --> proxy : Queue Ping | Origianl IP | Meter Get
+proxy --> zclient : UDP ACK REQ
+zclient --> proxy: ACK
+proxy --> proxyservice: Queue ACK
+end
+end
+
+proxy-->  proxyservice: Queue Flush | NodeIP
+note left: Node has missed two \n Wakeup Notification intervals... 
+
+loop
+proxyservice --> proxy : Queue NAK  | Origianl IP | Meter Get
+proxy --> zclient : SRC rewrite, NAK
+end
+@enduml

@@ -1,0 +1,76 @@
+# -*- UTF-8 -*-
+# Provisioning list for Z/IP Gateway Smart Start devices.
+ZIPGateway Smart Start Provisioning List Configuration, version = 1.0.
+
+# You can write comments by writing a # character as the first character in the line.
+# Comments will be ignored by the Z/IP Gateway
+
+# 0 A simple device with no tlv
+device = [dsk = QR:12345-65535-00000-01890-12345-65535-00000-18900, type=S2, tlvs = ()]
+
+# 1 Smart Start device with 3 tlvs.
+# You can insert newlines and spaces to make it readable.
+device = [dsk = 0xA0450102feff67987F69024ad7be8798, type=SmartStart,
+          tlvs =
+          ([type=1, value=0x54FF378100]
+# Any utf-8 character can be used in the strings, but the total length
+# must be less than 256 bytes.  Remember that most utf-8 characters
+# use several bytes.  Any string or hex sequence longer than 255 bytes
+# will make the configuration invalid.
+           [type=51, value=utf-8:"soveværelset"]
+           [type=50, value=utf-8:"loftslampe"])]
+
+# 2 Smart start device with several tlvs.
+device = [dsk = 0xA0450102feff6798B0450652feff6798, type=SmartStart,
+          tlvs =
+          ([type=1, value=0x54FF378100]
+           [type=0, value=0x54FF378100]
+           [type=255, value=0x54FF378100]
+           [type=51, value=utf-8:"Commode en chêne"]
+           [type=50, value=utf-8:"bordlampe"]
+           [type=254, value=utf-8:""])]
+
+# 3 Device with dsk in QR-code format and tabs in the formatting
+	device 	=	
+ 		[dsk    = 	QR:56645-64555-10000-34219-56445-64455-10400-34419, 
+		type	=	SmartStart,
+		tlvs 	= 	([      type	=	1,
+					value=0x54FF378101
+				 ]
+				 [      type    =       51, 	
+					value   =	0xe4bda000
+				 ]	)	]	
+
+# 4 Device with a newline in the location (4)
+device = [dsk = QR:00005-32435-54890-34691-10001-32435-54890-34691, type = S2,
+       tlvs = ([type=51, value=utf-8:"Sommerhus, 'Hornbæk'"] [type=50, value=utf-8:"你"])]
+
+# 5 The tlv value can be given as a hex sequence
+device = [dsk = QR:00006-32435-54890-34691-10001-32435-54890-34691, type = S2, tlvs = ([type=51, value=0xc2a92053696c69636f6e204c61627300] [type=50, value=utf-8:"sensor"])]
+
+# 6 Most special characters can be used in strings.
+device = [dsk = QR:00008-32435-54891-34691-00007-32435-54890-34691, type = S2, tlvs = ([type=51, value=utf-8:"Børneværelse"] [type=50, value=	utf-8:"This is *mine*!! Hands off!"])]
+
+# 7 Example of max length value.
+device = [dsk = QR:00793-32435-54890-34691-00789-32435-54890-34691, type = S2, tlvs = ([type=51, value=utf-8:"Sommerhus	Hornbæk"] [type=50, value=utf-8:"01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123"])]
+
+device = [dsk = QR:56141-64555-10000-34219-12345-65535-00000-51890, type=SmartStart, tlvs = ([type=1, value=0x54FF378100])]
+
+device = [dsk = QR:00002-32435-54890-34691-12345-65535-00000-31890, type = S2,
+       tlvs = ([type=51, value=utf-8:"Sommerhus
+ Hornbæk"] [type=50, value=utf-8:"sensor"])]
+
+device = [dsk = QR:00003-32435-54890-34691-12345-65535-00000-17189, type = S2,
+       tlvs = ([type=51, value=utf-8:"Sommerhus\nHornbæk"] [type=50, value=utf-8:"sensor"])]
+
+device = [dsk = 0x06deA0450102feff6798F78a9Bd7c018, type=SmartStart,
+          tlvs =
+          ([type=0, value=0x54FF378100]
+           [type=51, value=utf-8:"Chambre d'Irène"]
+           [type=50, value=utf-8:"loftslampe"])]
+
+# 
+device = [dsk = QR:00014-32435-54891-34691-12345-65535-00000-17189, type = S2, tlvs = ([type=51, value=utf-8:"Børneværelse"] [type=50, value=	utf-8:"This is *mine*!! Hands off!"])]
+device = [dsk = QR:00780-32435-54890-34691-12345-65535-00000-01890, type = S2,
+       tlvs = ([type=51, value=utf-8:"富华 饭店"]
+       [type=50, value=utf-8:"01234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123"])]

@@ -1,0 +1,164 @@
+/**
+ * \addtogroup nms
+ *
+ * \brief State Machine for Gateway Add Node Mode
+ *
+ * \subsection nms-draw-add State Machine for Gateway Add Mode
+ * 
+ * 
+\dot "Network Management State Machine for Add Node Mode."
+digraph nms {
+        size="12,18"
+        ratio=1.5
+
+        IDLE [color="", label="NM_IDLE"]        
+        IDLE_SMS [color="", label="NM_IDLE_sms"]
+
+        NM_WAITING_FOR_ADD [label="NM_WAITING_FOR_ADD"]
+        NM_NODE_FOUND [label="NM_NODE_FOUND"]
+
+//        ZW_AddNodeToNetwork_stop [label="ZW_AddNodeToNetwork(STOP)", shape=box]
+
+
+edge  [label="NODE_ADD\lSet nms.cmd ADD\lInvalidate new-DSK"]
+IDLE -> NM_WAITING_FOR_ADD
+
+edge [label="NODE_ADD_S2\lSet nms.cmd ADD\lSet nms S2 flag\lInvalidate new-DSK"]
+IDLE -> NM_WAITING_FOR_ADD
+
+edge [label="NODE_ADD_SMART_START"]
+IDLE -> IDLE_SMS
+
+edge [label="No pvl entry\lor no unsol dest"]
+IDLE_SMS -> IDLE
+
+edge [label="Found pvl entry from HomeID\lSet nms.cmd ADD\lSet nms S2 & SmS flags\lSet new-DSK from pvl\lTell unsol"]
+IDLE_SMS -> NM_WAITING_FOR_ADD
+
+edge [label="TIMEOUT\lor NODE_ADD_STOP\lSet status=FAILED"]
+NM_WAITING_FOR_ADD -> send_reply
+
+edge [label="ADD_NODE_FOUND", color=black]
+NM_WAITING_FOR_ADD -> NM_NODE_FOUND
+
+edge [label="ADD_FAILED\lor TIMEOUT"]
+NM_NODE_FOUND -> NM_NODE_FOUND_fail
+
+edge [label="ADD_CONTROLLER\lor ADD_SLAVE"]
+NM_NODE_FOUND -> NM_NODE_FOUND_success
+
+edge [label="bSource valid\land not SmS"]
+NM_NODE_FOUND_success -> NM_WAIT_FOR_PROTOCOL
+
+edge [label="bSource valid\land SmS\lSet sms_nodeid"]
+NM_NODE_FOUND_success -> NM_WAIT_FOR_PROTOCOL
+
+edge [label="bSource not valid\lnot SMS"]
+NM_NODE_FOUND_success -> NM_NODE_FOUND_fail
+
+edge [label="bSource not valid\lSMS\lSet sms_nodeid=tmp_node"]
+NM_NODE_FOUND_success -> NM_NODE_FOUND_fail
+
+edge [label="Not SmS\lSet status=FAILED"]
+NM_NODE_FOUND_fail -> send_reply
+
+edge [label="ADD_PROTOCOL_DONE\lStop ZW_AddNode()", style=dashed]
+NM_WAIT_FOR_PROTOCOL -> NM_WAIT_FOR_PROTOCOL
+
+edge [label="ADD_NODE_STATUS_DONE", style=solid]
+NM_WAIT_FOR_PROTOCOL -> NM_WAIT_FOR_SECURE_ADD_1
+
+edge [label="TIMEOUT\lor ADD_FAILED\lor ADD_NOT_PRIMARY\lSet status=FAILED"]
+NM_WAIT_FOR_PROTOCOL-> send_reply
+
+// _1 is the stuff happening in the wait_for_proto case after state change 
+edge [label="node exists\land not proxying\lInvalidate new-DSK\lTrigger SECURITY_DONE\lSet node flags=event_data\lUnlock probe"]
+NM_WAIT_FOR_SECURE_ADD_1 -> NM_WAIT_FOR_SECURE_ADD_dsk
+
+edge [label="node does not exist\lor proxying\lLock probe\lRegister node"]
+NM_WAIT_FOR_SECURE_ADD_1 -> NM_WAIT_FOR_SECURE_ADD_2
+
+edge [label="Is not SUC\lSet timer", style=dashed]
+NM_WAIT_FOR_SECURE_ADD_2 -> NM_PREPARE_SUC_INCLISION
+
+edge [label="Is SUC\l(nms S2 flag set\land GW runs S2)\lnode has S2\lStart S2 incl", style=solid]
+NM_WAIT_FOR_SECURE_ADD_2 -> NM_WAIT_FOR_SECURE_ADD_S2
+
+edge [label="Is SUC\lSomeone is not S2\land GW runs S0\land node has S0\land not SmartStart"]
+NM_WAIT_FOR_SECURE_ADD_2 -> NM_WAIT_FOR_SECURE_ADD_3
+
+edge [label="Is SUC\lNon secure\lTrigger SECURITY_DONE\lSet node flags=0\lUnlock probe", style=solid]
+NM_WAIT_FOR_SECURE_ADD_2 -> NM_WAIT_FOR_SECURE_ADD_dsk
+
+edge [label="S2 inclusion timeout", style=solid]
+NM_WAIT_FOR_SECURE_ADD_2 -> NM_WAIT_FOR_SELF_DESTRUCT
+
+edge [label="nms proxy flag set\lStart incl controller", style=dashed]
+NM_WAIT_FOR_SECURE_ADD_3 -> NM_WAIT_FOR_SECURE_ADD_S0
+
+edge [label="nms proxy flag not set\lStart S0 incl", style=dashed]
+NM_WAIT_FOR_SECURE_ADD_3 -> NM_WAIT_FOR_SECURE_ADD_S0
+
+edge [label="SECURITY_DONE", style=dashed]
+NM_WAIT_FOR_SECURE_ADD_S0 -> NM_WAIT_FOR_SECURE_ADD_dsk
+
+edge [label="TIMEOUT\lRequest handover", style=dashed]
+NM_PREPARE_SUC_INCLISION -> NM_WIAT_FOR_SUC_INCLUSION
+
+edge [label="PROXY_COMPLETE\lTrigger SECURITY_DONE", style=solid]
+NM_WIAT_FOR_SUC_INCLUSION -> NM_WAIT_FOR_SECURE_ADD_dsk
+
+// The real state
+edge [label="ADD_SEC2_REQ_KEYS\lSms\lFind keys in PVL advJoin\lsec2_key_grant()"]
+NM_WAIT_FOR_SECURE_ADD_S2 -> NM_WAIT_FOR_SECURE_ADD_keys
+edge [label="ADD_SEC2_REQ_KEYS\lNot Sms\lAsk client for keys", style=dashed]
+NM_WAIT_FOR_SECURE_ADD_S2 -> NM_WAIT_FOR_SECURE_ADD_S2
+
+// Not in Sms
+edge [label="ADD_SEC2_KEYS_SET\lCannot be SmS\lsec2_key_grant()"]
+NM_WAIT_FOR_SECURE_ADD_S2 -> NM_WAIT_FOR_SECURE_ADD_keys
+
+edge [label="ADD_SEC2_KEY_CHALLENGE\lSms\lFind key bytes 0-1 in PVL\lSet new-DSK\lsec2_dsk_accept()\l", style=dashed]
+NM_WAIT_FOR_SECURE_ADD_keys -> NM_WAIT_FOR_SECURE_ADD_dsk
+edge [label="ADD_SEC2_KEY_CHALLENGE\lnot Sms\lSet new-DSK\lAsk client for dsk", style=dashed]
+NM_WAIT_FOR_SECURE_ADD_keys -> NM_WAIT_FOR_SECURE_ADD_keys
+
+// Not in Sms
+edge [label="ADD_SEC2_DSK_SET\lcannot be SmS\lsec2_dsk_accept()\lSet new-DSK from frame\l"]
+NM_WAIT_FOR_SECURE_ADD_keys ->NM_WAIT_FOR_SECURE_ADD_dsk
+
+edge [label="SECURITY_DONE\land (not Sms or S2 success)\lSet node flags to event_data\lUnlock probe\l", style=dashed]
+NM_WAIT_FOR_SECURE_ADD_dsk -> NM_WAIT_FOR_PROBE_AFTER_ADD_probe_sm
+
+edge [label="SECURITY_DONE\land Sms\land S2 failed\lStart timer", style=solid]
+NM_WAIT_FOR_SECURE_ADD_dsk -> NM_WAIT_FOR_SELF_DESTRUCT
+
+// Cannot be smart start
+edge [label="NODE_ADD_STOP\lStop S2\lSet node flag KNOWN_BAD\lUnlock probe", style=dashed]
+{NM_WAIT_FOR_SECURE_ADD_S2, NM_WAIT_FOR_SECURE_ADD_keys, NM_WAIT_FOR_SECURE_ADD_dsk} -> NM_WAIT_FOR_PROBE_AFTER_ADD_probe_sm
+
+edge [label="node probe started\lUpdate pvl status to INCLUDED\lUpdate RD with new-dsk", style=solid]
+NM_WAIT_FOR_PROBE_AFTER_ADD_probe_sm -> NM_WAIT_FOR_PROBE_AFTER_ADD
+
+edge [label = "NODE_PROBE_DONE", style=dashed]
+NM_WAIT_FOR_PROBE_AFTER_ADD -> NM_WAIT_DHCP
+
+edge [label="TIMEOUT"]
+NM_WAIT_FOR_SELF_DESTRUCT -> NM_WAIT_FOR_TX_TO_SELF_DESTRUCT
+
+edge [label="tx fail or TX_DONE_SELF_DESTRUCT"]
+NM_WAIT_FOR_TX_TO_SELF_DESTRUCT -> NM_WAIT_FOR_SELF_DESTRUCT_REMOVAL
+
+edge [label="REMOVE_\lFAILED_OK\lor REMOVE_\lFAILED_FAIL\lSend to unsol\lReset nms", style=dashed]
+NM_WAIT_FOR_SELF_DESTRUCT_REMOVAL -> IDLE
+
+edge [label="TIMEOUT\lReset nms"]
+NM_WAIT_FOR_SELF_DESTRUCT_REMOVAL -> IDLE
+
+edge [label="DHCP_DONE\lor TIMEOUT"]
+NM_WAIT_DHCP -> send_reply
+
+}
+\enddot
+
+*/

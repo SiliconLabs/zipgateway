@@ -1,0 +1,85 @@
+Compile Z/IP Gateway for Raspberry pi 3B+
+=========================================
+
+1. Install dependency
+sudo apt-get install cmake gcc bison flex xsltproc libssl1.0-dev libusb-1.0-0-dev
+
+2. Build
+$ mkdir build 
+$ cd build 
+$ cmake -DRPI3PLUS=Y ..
+$ make package
+Find the Debian .deb package
+$ ls zipgateway-7.00.0-Linux-rpi3plus-armhf.deb
+
+
+
+Cross compilation of Z/IP Gateway for Raspberry Pi 3B+ Raspbian GNU/Linux 9.3 stretch
+=====================================================================================
+
+- Use Docker for cross-compiling for raspberry pi:
+
+For details on how to install and use docker see: https://confluence.silabs.com/x/Sot4BQ
+
+1. Start the zgw_armhf_debian_stretch_cross docker image with a bash
+$ docker run -v<path to zgw source>:/zgw -it zwave/zgw_armhf_debian_stretch_cross bash
+
+2. Build
+$ cd /zgw
+$ mkdir build_rpi
+$ cd build_rpi
+$ cmake -DCMAKE_TOOLCHAIN_FILE=../cmake/debian_stretch_armhf.cmake ..
+$ make
+$ make package
+
+- Use Ubuntu
+1.a Install dependenciess
+$ apt-get install -y gcc-arm-linux-gnueabihf pkg-config-arm-linux-gnueabihf libtool curl
+1.b cross compile openssl-1.0.2
+$ curl -L https://www.openssl.org/source/openssl-1.0.2q.tar.gz --output /opt/openssl.tar.gz \
+ && cd /opt \
+ && tar -xzf openssl.tar.gz \
+ && cd openssl-*/ \
+ && ./Configure linux-generic32 -DL_ENDIAN --prefix=/usr/arm-linux-gnueabihf/ --cross-compile-prefix=arm-linux-gnueabihf- shared \
+ && make SHLIB_MINOR="0.2" \
+ && make SHLIB_MINOR="0.2" install \
+ && rm -rf /opt/openssl*
+
+1.c libusb
+$ curl -L https://github.com/libusb/libusb/releases/download/v1.0.21/libusb-1.0.21.tar.bz2 --output /opt/libusb.tar.bz2 \
+ && cd /opt \
+ && tar -xjf libusb.tar.bz2 \
+ && cd libusb*/ \
+ && ./configure --prefix=/usr/arm-linux-gnueabihf/¨--host=arm-linux-gnueabihf --enable-udev=no \
+ && make \
+ && make install \
+ && rm -rf /opt/libusb*
+
+1.d libjson-c NOTE: json-c has a bug, so cross compile doesn't work.
+$ curl -L https://github.com/json-c/json-c/archive/json-c-0.12.1-20160607.tar.gz --output /opt/json-c.tar.gz 
+ && cd /opt \
+ && tar -xvf json-c.tar.gz 
+ 
+- Apply following patch:
+ diff --git a/configure.ac b/configure.ac
+index 4c5af94..a95ddb5 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -40,8 +40,8 @@ AC_TYPE_SIZE_T
+ # Checks for library functions.
+ AC_FUNC_VPRINTF
+ AC_FUNC_MEMCMP
+-AC_FUNC_MALLOC
+-AC_FUNC_REALLOC
++AC_CHECK_FUNCS([malloc])
++AC_CHECK_FUNCS([realloc])
+ AC_CHECK_FUNCS(strcasecmp strdup strerror snprintf vsnprintf vasprintf open vsyslog strncasecmp setlocale)
+ AC_CHECK_DECLS([INFINITY], [], [], [[#include <math.h>]])
+ AC_CHECK_DECLS([nan], [], [], [[#include <math.h>]])
+-- 
+$ mv json-c*/ json-c \
+ && cd json-c \
+ && ./configure  --prefix=/usr/arm-linux-gnueabihf/ --host=arm-linux-gnueabihf CFLAGS="-Wimplicit-fallthrough=0" \
+ && make \
+ && make install \
+ && rm -rf /opt/json-c*

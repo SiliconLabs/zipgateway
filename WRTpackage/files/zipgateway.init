@@ -1,0 +1,97 @@
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2009 Zensys
+# Startup script for OpenWRT
+
+START=90
+STOP=90
+VERSION_NAME="@NAME@"
+
+add_parm() {
+  local name=$2
+  local config=$1
+  config_get parm $config $name
+  echo "Zip${name} = $parm" >> /etc/${VERSION_NAME}.cfg
+}
+
+parseconfig() {
+  local config=$1
+
+  add_parm ${config} SerialAPIPortName
+  add_parm ${config} PanIp6
+  add_parm ${config} PanIp6PrefixLength
+  add_parm ${config} LanIp6
+  add_parm ${config} LanIp6PrefixLength
+  add_parm ${config} LanGw6
+  add_parm ${config} UnsolicitedDestinationIp6
+  add_parm ${config} UnsolicitedDestinationPort
+
+  add_parm ${config} CaCert
+  add_parm ${config} Cert
+  add_parm ${config} PrivKey
+  add_parm ${config} PSK
+  add_parm ${config} Portal
+}
+
+bootstrap() {
+#Setup lan interface
+
+uci set network.lan.ip6addr="fd00:aaaa::1/64"
+
+#Setup Z/IP router
+uci set ${VERSION_NAME}.@${VERSION_NAME}[-1].PanIp6="fd00:bbbb::1"
+uci set ${VERSION_NAME}.@${VERSION_NAME}[-1].UnsolicitedDestinationIp6="fd00:aaaa::1"
+uci set ${VERSION_NAME}.@${VERSION_NAME}[-1].LanIp6="fd00:aaaa::2"
+uci set ${VERSION_NAME}.@${VERSION_NAME}[-1].LanGw6="fd00:aaaa::1"
+
+#Setup radvd
+uci set radvd.@interface[-1].ignore="0"
+uci set radvd.@prefix[-1].prefix="fd00:aaaa::1/64"
+uci set radvd.@prefix[-1].ignore="0"
+
+uci add firewall forwarding
+uci set firewall.@forwarding[-1].src="lan"
+uci set firewall.@forwarding[-1].dest="lan"
+
+
+uci commit
+ifup lan
+/etc/init.d/radvd restart
+/etc/init.d/firewall restart
+}
+
+boot() {
+  [ -z `uci get network.lan.ip6addr` ] && bootstrap
+
+  # make the ttyUSB0 device because of issue in kernel 2.4:  nor /dev/ttyUSB0 not /dev/usb/tts/0 Serial API device name not work until mknod issued.
+  [ ! -c /dev/ttyUSB0 ] && mknod /dev/ttyUSB0 c 188 0
+  [ ! -c /dev/ttyACM0 ] && mknod /dev/ttyACM0 c 166 0
+
+  serial_port=`uci get ${VERSION_NAME}.@[0].SerialAPIPortName`
+  if [ -z "$serial_port" ]; then
+    dmesg | grep ttyUSB0 >/dev/null && serial_port="/dev/ttyUSB0"
+    dmesg | grep ttyACM0 >/dev/null && serial_port="/dev/ttyACM0"
+    uci set ${VERSION_NAME}.@[0].SerialAPIPortName="$serial_port"
+    uci commit
+  fi
+  start
+}
+
+start() {
+  rm -f /etc/${VERSION_NAME}.cfg
+  config_load ${VERSION_NAME}                      
+  config_foreach parseconfig ${VERSION_NAME}   
+
+  #setup pan route
+  panaddr=`uci get ${VERSION_NAME}.@${VERSION_NAME}[0].PanIp6`
+  panlen=`uci get ${VERSION_NAME}.@${VERSION_NAME}[0].PanIp6PrefixLength`
+  lanaddr=`uci get ${VERSION_NAME}.@${VERSION_NAME}[0].LanIp6`
+
+  route -A inet6 add $panaddr/$panlen gw $lanaddr
+  [ -d /var/lib/${VERSION_NAME} ] || mkdir -p /var/lib/${VERSION_NAME}
+  # Start Z/IP Router as daemon:
+  ${VERSION_NAME} -e /etc/${VERSION_NAME}.eeprom &
+}
+
+stop() {
+  killall ${VERSION_NAME}
+}

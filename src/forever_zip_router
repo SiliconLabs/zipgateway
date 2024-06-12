@@ -1,0 +1,5 @@
+#!/bin/sh
+while [ 1 ]
+do
+  sudo ./ZIP_Router.linux -c ../files/ziprouter.cfg -e ../eeprom.dat 2>&1 | tee -i console.txt
+done

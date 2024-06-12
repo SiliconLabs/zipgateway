@@ -1,0 +1,16 @@
+@startuml
+title "Mailbox service is offline."
+actor "Z/IP Client" as zclient 
+participant "Mailbox Proxy" as proxy
+participant "Non-Listening Node" as node
+database "Mailbox Service" as proxyservice
+ 
+zclient --> proxy : Meter Get
+proxy -> node : Meter Get
+...200ms Later...
+proxy --> zclient : NACK Waiting
+node -> proxy : NACK
+proxy --> proxyservice : Queue Push| Origianl IP | Meter Get
+...500ms Later...
+proxy --> zclient : NACK
+@enduml

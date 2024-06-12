@@ -1,0 +1,10 @@
+GeneratorModel for yakindu::c {
+ 
+	statechart secure_learn {
+
+		feature Outlet {
+			targetProject = "ZIP_Gateway"
+			targetFolder = "src-gen"
+		}
+	}
+}

@@ -1,0 +1,48 @@
+CONTIKI_CPU_DIRS = . net
+
+#mtarch.c 
+CONTIKI_SOURCEFILES += rtimer-arch.c watchdog.c
+### Compiler definitions
+#CC       = gcc
+#LD       := $(CC)
+#AS       = as
+#NM       = nm
+#OBJCOPY  = objcopy
+#STRIP    = strip
+ifdef WERROR
+CFLAGSWERROR=-Werror -std=c99 
+endif
+CFLAGSNO = -Wall -g $(CFLAGSWERROR) -Wno-error=unused-value
+CFLAGS  += -fno-strict-aliasing $(CFLAGSNO) -ffunction-sections  -fdata-sections -Wno-error=array-bounds
+#LDFLAGS  += -Wl
+LDFLAGS  += -lc
+ifeq ($(NO_OPTIMIZE),1)
+CFLAGS+=-g3 -gdwarf-2
+else
+CFLAGS+=-Os
+LDFLAGS  += -Os
+endif
+#,--print-gc-sections
+
+### Compilation rules
+
+%.so: $(OBJECTDIR)/%.o
+	$(LD) -shared -o $@ $^
+
+ifdef CORE
+.PHONY: symbols.c symbols.h
+symbols.c symbols.h:
+	$(NM) -C $(CORE) | grep -v @ | grep -v dll_crt0 | awk -f $(CONTIKI)/tools/mknmlist > symbols.c
+#	@${CONTIKI}/tools/make-symbols $(CORE)
+else
+symbols.c symbols.h:
+	@${CONTIKI}/tools/make-empty-symbols
+endif
+
+contiki-$(TARGET).a: ${addprefix $(OBJECTDIR)/,symbols.o}
+
+CUSTOM_RULE_LINK=1
+
+%.$(TARGET): %.co $(PROJECT_OBJECTFILES) $(PROJECT_LIBRARIES) contiki-$(TARGET).a
+	$(CC) $(LDFLAGS) $(TARGET_STARTFILES) ${filter-out %.a,$^} ${filter %.a,$^} $(TARGET_LIBFILES) -o $@
+	$(SIZE) $@

@@ -1,0 +1,41 @@
+@startuml
+title "Mailbox proxy Client offline."
+actor "Z/IP Client" as zclient 
+participant "Mailbox Proxy" as proxy
+participant "Non-Listening Node" as node
+database "Mailbox Service" as proxyservice
+ 
+zclient --> proxy : Meter Get
+proxy -> node : Meter Get
+...200ms Later...
+proxy --> zclient : NACK Waiting
+node -> proxy : NACK
+proxy --> proxyservice : Queue Push| Origianl IP | Meter Get
+proxyservice --> proxy : ACK
+
+loop 60s repeating loop
+proxyservice --> proxy : Queue Waiting | Origianl IP | Meter Get
+proxy --> zclient : NACK Waiting, time left = XXXX
+
+group Only every 10 min
+proxyservice --> proxy : Queue Ping | Origianl IP | Meter Get
+proxy --> zclient : UDP ACK REQ
+note right: Proxyservice marks client as offline,\n don't send more waiting messages
+... 500ms timeout ...
+end
+end
+
+node -> proxy : Wakeup Information
+proxy -> node : ACK
+proxy --> proxyservice : SRC rewrite, Wakeup Information
+proxyservice --> proxy : ACK
+loop
+proxyservice --> proxy : Queue Pop [last_bit] | Origianl IP | Meter Get
+note left: Last bit is set on last message
+proxy -> node : Meter Get
+node -> proxy : ACK
+proxy --> proxyservice : Queue Ack
+end
+proxy -> node : No More information
+node -> proxy : ACK
+@enduml

@@ -1,0 +1,43 @@
+Template: zipgateway/serial_port
+Type: string 
+Default: /dev/ttyACM0
+Description: The serial port where z-wave controller is connected.
+ (default: /dev/ttyACM0)
+
+Template: zipgateway/zip_lan_ip6
+Type: string
+Default: fd00:aaaa::3
+Description: The IPv6 address of the Z/IP Gateway
+ This is LAN IPv6 address of the Z/IP Gateway. 
+ This is the address which should be used when communicating with the Z/IP Gateway.
+ This address should also be the target address of the route to the Z-Wave network.
+ If this address is the 0::0 address the zipgateway will auto-generate a ULA address.  
+
+Template: zipgateway/zip_pan_ip6
+Type: string
+Default: fd00:bbbb::1
+Description: IPv6 prefix of the Z-Wave network. 
+ All Z-Wave nodes will be assigned an IPv6 address in this prefix. The host system should make sure to establish a route to this prefix via the ZipLanIp6. The default value is the 0::0 address, which means that the zipgateway will auto create a ULA prefix for the Z-Wave network. 
+
+Template: zipgateway/wlan
+Type: select 
+Choices: ${choices}
+Description: Wireless network interface where the ZIP Client will be connected
+ Please configure your wireless interface in /etc/network/interfaces file of wpa_supplicant.conf file before starting the Z/IP Gateway.
+ See "man wpa_supplicant" for more information.
+
+Template: zipgateway/enable_wlan
+Type: select 
+Default: wired
+Choices: wired, wireless 
+Description: Enable wireless configuration of Z/IP Gateway?
+
+Template: zipgateway/bridge_port
+Type: select 
+Choices: ${choices}
+Description: Wired network interface where the ZIP Client will be connected to
+
+Template: zipgateway/restart_nw
+Type: select 
+Choices: Yes, I will reboot later
+Description: Network configuration have changed. Reboot now?

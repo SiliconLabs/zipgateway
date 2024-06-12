@@ -1,0 +1,518 @@
+/**
+\page migration Migrating to Z/IP Gateway from Third-Party Gateways
+
+\section migration_intro Introduction
+
+With the release of Z/IP Gateway 7.x it is now a certification requirement to
+use it for making Z-Wave gateways.
+
+It is possible to perform a \em migration to the latest Z/IP gateway where
+essential configuration data is transferred from the legacy gateway to the Z/IP
+gateway such that when the Z/IP gateway is started, it will immediately be fully
+functional with all the same included nodes.
+
+The migration tools can also be used to restore a the ZGW node database from if 
+the eeprom.dat file for sqlite database has been lost. This recovery scheme is 
+only possible if a recovery JSON file can be generated from external data
+sources. 
+
+\note The current migration tools do not support importing IMA data and mailbox messages.
+
+\section migration_process The Migration Process
+
+\subsection migration_prerequisites Prerequisites
+
+Migration is supported for gateways using Z-Wave static or bridge controllers
+with firmware version 6.60 or later.
+
+\subsection migration_process_overview Overview
+
+In general, there are \b two migrations scenarios: <b>software migration</b> and
+<b>hardware migration</b>. They are briefly outlined here but will be described
+in detail in the following sections.
+
+<b>Software Migration:</b>
+
+Replace legacy gateway software with Z/IP Gateway software and updating the
+firmware on a 500-series Z-Wave module with the latest Z-Wave bridge firmware.
+The physical gateway device and the 500-series Z-Wave module are reused.
+
+-# Construct a \c zgw.json file.
+-# Install and configure Z/IP Gateway without starting it.
+-# Stop legacy gateway.
+-# Run migration import script.
+-# Reboot gateway device to reconfigure network setting and start Z/IP Gateway.
+
+It should be noted that the execution time of the migration tool is ~1 minute, due to
+flashing of new firmware. USB devices are a bit faster than serial devices.
+
+<b>Hardware Migration:</b>
+
+A full migration where the legacy gateway device and/or the 500-series Z-Wave
+module is replaced.
+
+-# Construct a \c zgw.json file
+-# On old device: stop legacy gateway.
+-# On old device: install Z/IP gateway (to provide migration tools).
+   Don't configure or start it.
+-# On new device: install and configure Z/IP gateway without starting it.
+-# On old device: extract NVM content from Z-Wave module.
+-# Convert NVM content to format required by Z-Wave module on new device.
+-# On new device: program Z-Wave module with latest Z-Wave bridge controller firmware.
+-# On new device: write converted NVM content to Z-Wave module.
+-# On new device: run gateway restore utility.
+-# On new device: reboot gateway device to reconfigure network setting and start Z/IP gateway.
+
+<b>Recovery:</b>
+-# Construct a \c zgw.json file
+-# On new device: run gateway restore utility.
+-# Reboot gateway device to reconfigure network setting and start Z/IP Gateway.
+
+
+\subsection migration_preparation Prepare the Migration
+
+<ol>
+
+<li> Download Z-Wave Embedded SDK from
+https://www.silabs.com/products/development-tools/software/z-wave/embedded-sdk
+and extract the serialapi bridge controller firmware image with the correct
+Z-Wave chip and frequency.
+
+<ul>
+    <li> The embedded SDK for 500-series chips is version 6.81.xx and the firmware
+      image to extract is serialapi_controller_bridge_\<chiptype\>_\<freq\>.hex
+
+    <li> The embedded SDK for 700-series chips is version 7.xx and the firmware
+      image to extract is ZW_SerialAPI_Controller_7.xx.xx_EFR32ZG14_REGION_\<freq\>.hex
+</ul>
+
+<li>Construct a \c zgw.json file containing data to be migrated from the
+legacy gateway into the new Z/IP Gateway. See \ref zgw_json_schema for details
+about this file.
+
+<li>Check that the structure of \c zgw.json file is correct by validating it
+against the zipgateway JSON-schema file. See \ref migration_json_validation.
+
+<li>Download, install, and configure Z/IP gateway on the gateway device. Don't
+start it or reboot the OS at this time. See \ref build and \ref install
+
+\note If performing a <em>hardware migration</em>, Z/IP gateway must be
+installed on \em both the \b old and the \b new gateway device. On the \b old
+device only a few migration tools from the Z/IP gateway installation will be
+used - the Z/IP gateway should never run on the old device and for that reason
+it does not need to be configured there.
+
+\note If any of the values for APP_MANUFACTURER_ID, APP_PRODUCT_TYPE_ID or APP_PRODUCT_ID  
+has been changed in the SerialAPI controller target firmware, the values must be 
+updated in nvm500_import.c. If the controller firmware is taken directly from a
+SDK no action is needed. 
+</ol>
+
+
+When the above steps have been completed the actual migration can be performed.
+
+
+
+\subsection migration_software Performing a Software Migration
+
+For a <em>software migration</em>, where the gateway device and 500-series
+Z-Wave module are updated to use Z/IP gateway and new Z-Wave bridge controller
+firmware, do the following:
+
+-# Ensure all steps mentioned in \ref migration_preparation have been performed.
+-# Stop legacy gateway and modify system scripts to ensure it is not started
+automatically again, ever.
+-# Run the migration import script \c zgw_import.sh. See \ref
+migration_run_import_script.
+-# Reboot the device. This will ensure that changes to network settings
+performed during Z/IP gateway installation are applied. During the reboot Z/IP
+gateway will be started automatically. See \ref run.
+-# The migration is complete!
+
+\subsection migration_recovery Node database recovery
+
+This recovery scheme is intended for the event where the node database 
+eeprom.dat or zipgateway.db has been lost. A prerequisite for this recovery 
+scheme is that the migration JSON file can be generated form external 
+datasources.
+
+For this recovery scheme a special "offline" is supported by the migration 
+tool. See \ref migration_running_zgw_restore
+
+The steps required in Node database recovery is:
+
+-# Construct JSON file form external data source.
+-# Upgrade ZGW debian package if needed
+-# Run the zgw_restore tool 
+-# Start the gateway
+
+\subsection migration_hardware Performing a Hardware Migration
+
+For a <em>hardware migration</em>, where the gateway device and Z-Wave module are
+replaced, the \c zgw_import.sh script cannot currently be used. Instead do the
+following:
+
+<ol>
+
+<li> Ensure all steps mentioned in \ref migration_preparation have been performed.
+
+<li> On the \b old gateway device stop legacy gateway and modify system scripts to
+ensure it is not started automatically again, ever.
+
+<li> On the \b old gateway device run the \c zw_programmer utility to extract
+the NVM (Non Volatile Memory) content from the old Z-Wave module and save it to
+a (binary) file \c nvm_old.bin. Make a note of the NVM layout version (\em
+nvm_version) reported by \c zw_programmer (\c "static6.6" in the following
+example). See \ref migration_running_zw_programmer.
+
+\verbatim
+# zw_programmer -s /dev/ttyUSB0 -r nvm_old.bin
+...
+Serial version: ..., NVM: static6.6
+...
+\endverbatim
+
+<li> On the \b old gateway device run the \c zw_nvm_converter utility to
+convert/export the binary NVM file \c nvm_old.bin to a version independent \c
+nvm.json file. Provide \c zw_nvm_converter with the NVM layout version (\em
+nvm_version) noted in the previous step. See \ref
+migration_running_zw_nvm_converter.
+
+\verbatim
+$ zw_nvm_converter -e static6.6  nvm_old.bin  nvm.json
+\endverbatim
+
+<li> Transfer the \c nvm.json file from the \b old gateway device to the \b new
+gateway device.
+
+<li> On the \b new gateway device run \c zw_programmer to program the Z-Wave
+module with the firmware hex image previously downloaded as part of the Z-Wave
+Embedded SDK. See \ref migration_running_zw_programmer.
+
+\verbatim
+# zw_programmer -s /dev/ttyUSB0 -p serialapi_controller_bridge_ZM5304_EU.hex
+\endverbatim
+
+<li> On the \b new gateway device run \c zw_nvm_converter to convert/import the
+version independent \c nvm.json file to a binary \c nvm_new.bin file specific to
+the firmware version of the Z-Wave module on the new gateway device. See \ref
+migration_running_zw_nvm_converter.
+
+\verbatim
+$ zw_nvm_converter -i bridge6.8  nvm.json  nvm_new.bin
+\endverbatim
+
+<li> On the \b new gateway device run \c zw_programmer to write the converted
+NVM content to the Z-Wave module. See \ref migration_running_zw_programmer.
+
+\verbatim
+# zw_programmer -s /dev/ttyUSB0 -w nvm_new.bin
+\endverbatim
+
+<li> Transfer the \c zgw.json file prepared previously (see \ref
+migration_preparation) to the \b new gateway device.
+
+<li> On the \b new gateway device run the ZGW Restore Tool to create
+the zipgateway persistence data (zipgateway.db,
+provisioning_list_store.dat, and NVM application area) from the
+zgw.json file and the data in the bridge controller.  See \ref
+migration_running_zgw_restore.
+
+\verbatim
+# zgw_restore -s /dev/ttyUSB0 -j zgw.json
+\endverbatim
+
+<li> Reboot the \b new Z/IP Gateway device. This will ensure that
+changes to network settings performed during Z/IP Gateway installation
+are applied. During the reboot the zipgateway process will be started
+automatically, as a service.  See \ref run.
+
+<li> The migration is complete!
+
+</ol>
+
+
+
+\section migration_tools Migration Support Tools
+
+A number of tools are available to support a migration to Z/IP gateway.
+
+\subsection migration_run_import_script Running the Import Script
+
+The script \c zgw_import.sh (\c @CMAKE_INSTALL_PREFIX@/bin/zgw_import.sh)
+performs the steps needed to perform a <em>software migration</em> on same
+hardware.
+
+\verbatim
+Usage: zgw_import.sh -s <serial dev> -f <target_firmware> -p <protocol_name> -j <json_file>
+   -s <serial dev>      : device file to which the Z-Wave controller is attached,
+                          defaults to the settings in zipgateway.cfg
+   -f <target_firmware> : hex or gbl file of the bridge controller firmware to be
+                          flashed on the module
+   -p <protocol_name>   : name of the protocol which the firmware file implements
+                          e.g. bridge6.8
+   -j <json_file>       : ZGW Data JSON File that contains the data to import
+   -o                   : offline mode no firmware update will be attempted
+  
+\endverbatim
+
+For example:
+
+\verbatim
+# zgw_import.sh -s /dev/ttyUSB0 -p bridge6.8 -f serialapi_controller_bridge_ZM5304_EU.hex -j zgw.json
+\endverbatim
+
+\c target_firmware is the new Z-Wave bridge controller firmware image file.
+
+\c protocol_name is the protocol name corresponding to the firmware image. It
+can be one of the following:
+
+- \c bridge6.8 : Z-Wave Bridge 6.8x
+- \c bridge6.7 : Z-Wave Bridge 6.7x
+- \c bridge6.6 : Z-Wave Bridge 6.6x
+
+Normally a protocol name corresponding to the latest 500-series firmware image
+should be used. Currently this is \c bridge6.8.
+
+\note The script will compare the version of the firmware on the Z-Wave module
+with the version specified with \c protocol_name, and \b only upgrade the NVM
+and program the new firmware image \b if the versions are different. For this
+reason, if the Z-Wave module e.g. contains 6.8x firmware (e.g. 6.81.01) and the \c
+target_firmware file contains a 6.81.03 image mandating \c protocol_name to be
+\c bridge6.8, then the Z-Wave module will \b not be re-programmed with that
+newer image!
+
+
+
+\subsection migration_running_zw_programmer Running zw_programmer
+
+The \c zw_programmer utility (\c @CMAKE_INSTALL_PREFIX@/bin/zw_programmer) can
+be used to program a Z-Wave module as well as reading and writing its NVM
+content.
+
+\verbatim
+Usage: zw_programmer -s serial_device [ -r nvm.bin | -w nvm.bin | -p firmware_image_file [-a] | -t ]
+
+   -s specifies the path of for the Serial device / Z-Wave module.
+   -r read the nvm contents from the serial_device into the specified filename in binary format.
+   -w write the nvm contents to the serial_device from the specified filename in binary format.
+   -p program a new firmware onto the serial_device from the specified filename.
+      NB: for 500-series chips use a .hex file. For 700-series chips use a .gbl file.
+   -a use if the chip is already in Auto Programming Mode (enforced by holding down the reset button).
+      NB: This option is valid only for 500-series chips.
+   -t test mode. Will connect to serial device and show info about the Z-Wave module.
+\endverbatim
+
+
+
+\subsection migration_running_zw_nvm_converter Running zw_nvm_converter
+
+The \c zw_nvm_converter utility (\c @CMAKE_INSTALL_PREFIX@/bin/zw_nvm_converter)
+can be used to convert NVM (Non Volatile Memory) content exported from a
+specific Z-Wave firmware version to NVM content to be imported into a different
+Z-Wave firmware version.
+
+\verbatim
+Usage: zw_nvm_converter [-i <format_name> |-e <format_name> ] <src> <dst>
+   -e Export mode, produce a JSON file from an NVM file.
+   -i Import mode, produce a NVM file from a JSON file.
+
+Note for bridge7.16 and onward NVM migration is handled by the Z-Wave
+module automatically so the corresponding steps for zw_nvm_converter should be skipped.
+
+supported formats are:
+
+   bridge7.15 : NVM Converter for Z-Wave Bridge 7.15
+   bridge7.12 : NVM Converter for Z-Wave Bridge 7.12
+   bridge7.11 : NVM Converter for Z-Wave Bridge 7.11
+   bridge6.8 : NVM Converter for Z-Wave Bridge 6.80
+   bridge6.7 : NVM Converter for Z-Wave Bridge 6.70
+   bridge6.6 : NVM Converter for Z-Wave Bridge 6.60
+   static6.8 : NVM Converter for Z-Wave Static 6.80
+   static6.7 : NVM Converter for Z-Wave Static 6.70
+   static6.6 : NVM Converter for Z-Wave Static 6.60
+\endverbatim
+
+Note that as stated in the help message about supported formats, for bridge7.16 and onward NVM migration is handled by the Z-Wave module automatically so the corresponding steps for zw_nvm_converter should be skipped.
+For example, to transfer the NVM content \b from a 500-series static controller
+on /dev/ttyUSB0 running firmware 6.60 \b to a 500-series bridge controller on
+/dev/ttyUSB1 running firmware 6.81.03:
+
+\verbatim
+# zw_programmer -s /dev/ttyUSB0 -r controller_66.bin
+$ zw_nvm_converter -e static6.6 controller_66.bin controller.json
+$ zw_nvm_converter -i bridge6.8 controller.json controller_68.bin
+# zw_programmer -s /dev/ttyUSB1 -w controller_68.bin
+\endverbatim
+
+To transfer the NVM content \b from a 700-series bridge controller
+on /dev/ttyUSB0 running firmware 7.16 \b to a 700-series bridge controller on
+/dev/ttyUSB1 running same version firmware 7.16 :
+
+\verbatim
+# zw_programmer -s /dev/ttyUSB0 -r controller_7_16.bin
+# zw_programmer -s /dev/ttyUSB1 -w controller_7_16.bin
+\endverbatim
+
+\note The NVM in a 500-series controller can hold 2 Kb of application data. On a
+700-series controller there is only set aside 512 bytes for application data.
+When converting the NVM between a 500-series controller and a 700-series
+controller (calling \c zw_nvm_converter with \c -i \c bridge7.11) the \c
+zw_nvm_converter will show the following warning message:
+
+\note \verbatim
+WARNING: "applicationData" will be truncated. Bytes with non-zero values: 2048. Max application data size in generated NVM image: 512.
+\endverbatim
+
+\note This means that the JSON file provided to \c zw_nvm_converter contains more than
+512 bytes of (non-zero) application data. Since the application area in a
+500-series controller NVM can be left uninitialized most of that data is
+probably just random. A Z/IP gateway will never store more than 512 bytes of
+application data.
+
+
+
+\subsection migration_running_zgw_restore Running zgw_restore
+
+The ZGW Restore Tool is used to restore the runtime state of the zipgateway
+process from a Z/IP Gateway migration package created based on the configuration
+of an older Z/IP Gateway (pre-7.11.01 release) or a third-party gateway.
+
+\verbatim
+Usage: zgw_restore -s serial_dev -j backup_file [-i installation_path] [-d data_path]
+   -s: Device name of the serialport which has the Z-Wave controller module attached
+   -j: Location of the json backup file to use for the restore
+   -o: Offline mode, read all data json file without using the controller module
+   -i: Installation prefix, path to the gateway configuration files (default /usr/local/etc/)
+   -d: Location of the zipgateway storage files, zipgateway.db and provision_list.dat (default /usr/local/var/lib/zipgateway/)
+\endverbatim
+
+The restore tool has a special offline mode, where a
+zipgateway.db file can be re-constructed without access to the Z-Wave
+controller module. However the offline option require addition fields to be
+added to the JSON file. The additional fields are:
+ - zgw.nodeList[].isZGW
+ - zgw.nodeList[].zgwZWNodeData.nodeType
+ - zgw.nodeList[].zgwZWNodeData.mode
+
+It should also be noted that the following fields in the JSON file are ignored
+in offline mode:
+ - zwNetworkData.zwSecurity.ECDHPrivateKey
+ - zwNetworkData.zwSecurity.S0key
+ - zwNetworkData.zwSecurity.S2AuthenticatedKey
+ - zwNetworkData.zwSecurity.S2UnauthenticatedKey
+ - zwNetworkData.zwSecurity.S2AccessKey
+ - zwNetworkData.zwSecurity.S2UnauthenticatedKeyLR
+ - zwNetworkData.zwSecurity.S2AccessKeyLR
+
+
+\see \ref zgw-restore.
+
+\subsection migration_json_validation Validating Gateway JSON Import Files
+
+The ZGW Restore Tool assumes that the bridge controller has already
+been restored (see \ref migration_running_zw_nvm_converter).  It then
+uses the restored Z-Wave bridge controller and a ZGW Data File to
+regenerate the runtime state of the zipgateway process.  This data
+file must be constructed from data extracted from the original
+controller (see \ref zgw_json_schema).
+
+Customers with third-party gateways should develop tools to automatically
+generate the ZGW Data File. To aid in the construction of the file
+a JSON schema file (see https://json-schema.org) is available in the Z/IP
+Gateway bundle at this location: \c systools/doc/zgw_json.schema.json
+
+The generated JSON files should be checked for compliance with \c
+zgw_json.schema.json. This is done using a <em>JSON schema validator</em>.
+
+One such validator is https://github.com/Julian/jsonschema which is a set of
+Python scripts that can be installed with \c pip as:
+
+\verbatim
+$ pip install jsonschema
+\endverbatim
+
+To validate a JSON file run \c jsonschema validator this way:
+
+\verbatim
+$ jsonschema -i my_zgw.json systools/doc/zgw_json.schema.json
+\endverbatim
+
+If the ZGW Data File is not compliant with the schema, then \c jsonschema will
+indicate what the error is. In some cases the error messages will unfortunately
+be quite difficult to use for troubleshooting.
+
+In general \c zgw_restore should not be executed using JSON files that have not
+been validated against \c zgw_json.schema.json.
+
+
+
+\section zgw_json_schema ZGW Data File
+
+When migrating to a Z/IP Gateway from a different type of controller,
+the state of the zipgateway process must be re-created by the restore
+tool.  To allow this, the properties of the controller and the Z-Wave
+network must be written to a zipgateway JSON file (the ZGW Data File).  (Note
+that this is not the same JSON format as the one used by the NVM
+converter.)
+
+Several example zipgateway JSON files can be found in the \c
+systools/doc/ folder:
+
+- \c zgw_example_NoProbe.json : as much information as possible provided for
+  migration, so that the Z/IP Gateway does not need to probe the network.
+- \c zgw_example_FullProbe.json : as little information as possible provided
+  for migration so that Z/IP Gateway has to probe the network to function
+  normally. Note that the endpoint list for each node MUST have the correct
+  number of endpoints for the node, including the root device (endpoint 0). The
+  information for each endpoint can be minimal, see, e.g., node 4 in this example.
+- \c zgw_example_MinimalNoProbe.json : the minimal information provided for Z/IP
+  Gateway not to probe and work reasonably well after migration.
+
+The JSON schema for the ZGW Data File format is available at \c
+systools/doc/zgw_json.schema.json.
+
+According to the JSON schema some fields are optional. It should be
+noted that if some of the optional fields are left out for a node, the
+gateway may re-interview the node when starting up.
+
+If the zipgateway has to re-interview a node, this will be done
+immediately when the zipgateway process starts up, except for sleeping
+nodes.  Sleeping nodes will be interviewed when the zipgateway
+receives the first Wake Up Notification from that node.
+
+\note If the zipgateway receives many Wake Up Notifications within a
+short interval, or while it is still interviewing listening nodes, the
+interview of the sleeping node may fail, because the sleeping node
+only waits 10s for a reply.
+
+\note If the migration data provided in the ZGW Data File is not
+correct, the Z/IP Gateway may not behave correctly after migration.
+
+This section documents the JSON schema defining the ZGW Data File.
+
+\see For details on how these fields correspond to the data structures
+in the zipgateway process, see \ref sec_persist_org.
+
+@JSON_SCHEMA_DOX_ZGW@
+
+
+
+\section zw_controller_json_schema Z-Wave Controller NVM Data file
+
+When migrating to a Z/IP Gateway or performing a backup/restore of a Z/IP
+Gateway or replacing a Z-Wave controller, the content of the Z-Wave controller
+NVM storage must be migrated too. During this process the NVM content is
+extracted with \c zw_programmer (see \ref migration_running_zw_programmer) and
+converted to a JSON file with \c zw_nvm_converter (see \ref
+migration_running_zw_nvm_converter). The content of the controller NVM JSON file
+should normally not be modified by hand.
+
+The JSON schema of the controller NVM JSON file is available in the file \c
+systools/doc/zw_controller.schema.json.
+
+This section documents the JSON schema defining the structure of the Z-Wave
+controller NVM JSON file. 
+
+@JSON_SCHEMA_DOX_ZW_CONTROLLER@
+*/

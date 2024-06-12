@@ -1,0 +1,11 @@
+#!/bin/sh
+
+CNT=0
+while [ $CNT -lt 5 ]
+do
+    echo $IP;
+    if [ $? -eq 0 ] ; then
+        break;
+    fi
+    CNT=$(( $CNT + 1 ))
+done

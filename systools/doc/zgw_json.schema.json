@@ -1,0 +1,554 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Gateway restore",
+  "description": "ZIP Gateway restore schema",
+
+  "definitions": {
+ 
+    "uint8": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 255
+    },
+    "uint8_nonzero": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 255
+    },
+    "uint16": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 65535
+    },
+    "nodeId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4000
+    },
+    "homeId": {
+      "oneOf": [
+        {
+          "description": "Home ID as a hex number",
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^0[xX][0-9a-fA-F]{8}$"
+        },
+        {
+          "description": "Home ID as a decimal number",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        }
+      ]
+    },
+    "versionString": {
+      "description": "Major.minor.patch version string formatted like '2.05.21'",
+      "type": "string",
+      "pattern": "^[0-9]{1,2}\\.[0-9]{2}\\.[0-9]{2}$"
+    },
+    "ipv6String": {
+        "description": "IPv6 address.",
+        "type": "string",
+        "pattern": "^([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}$"
+    },
+    "keyString": {
+        "description": "Security key as a hex number",
+        "type": "string",
+        "pattern": "^[0-9a-fA-F]{16,64}$"
+    },
+    "commandClassIdentifer":
+    {
+        "description": "Command class identifier as a hex number. A long hex string will be interpreted as multiple command class identifiers, where each pair of hex digits is a separate identifier.",
+        "type": "string",
+        "pattern": "^([0-9a-fA-F][0-9a-fA-F]){0,70}$"
+    },
+    "timeStamp": {
+        "oneOf":[
+            {
+                "description": "System timestamp represented as an integer (e.g., response of ContikiOS system call clock_seconds()). <br>Note: This representation is not recommended since it's based on the Linux system call clock_gettime(CLOCK_MONOTONIC_RAW), where the returned time is referenced to some arbitrary point in time.",
+                "type": "integer"
+            },
+            {
+                "type": "object",
+                "properties" :{
+                    "timeZone":{"type": "string" },
+                    "theSystemTimeStamp": {
+                        "description": "RFC 3339 date format, for example, 2018-11-13T20:20:39+00:00",
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            }
+      ]
+    },
+    "supportedCCsProperties": {
+       "description": "List of all supported command classes and their version.",
+       "type": "array",
+       "maxItems": 35,
+       "items" : {
+          "type": "object",
+          "properties": {
+              "commandClassId": {
+                  "description": "Command class identifer as a decimal number.",
+                  "type": "integer"
+              },
+              "version": {
+                  "description": "Version of the supported command class.",
+                  "$ref": "#/definitions/uint8_nonzero"
+              }
+          }
+       }
+    },
+    "DSKstring": {
+        "oneOf": [
+            {
+                "description": "DSK string as a hex number.",
+                "type": "string",
+                "pattern": "^0[xX][0-9a-fA-F]{32}$"
+            },
+            {
+                "description": "DSK string as a decimal number.",
+                "type": "string",
+                "pattern": "^QR:[0-9]{5}\\-[0-9]{5}\\-[0-9]{5}\\-[0-9]{5}\\-[0-9]{5}\\-[0-9]{5}\\-[0-9]{5}\\-[0-9]{5}$"
+            }
+        ]
+    },
+    "mDNSinfo": {
+        "type": "object",
+        "description": "mDNS information of a node that define the name and location. The name and location string MUST be encoded according to the Name field of the Z/IP Name and Location Command Class (SDS13782)",
+        "properties":{
+            "name": {
+                "type": "string",
+                "default": "",
+                "description": "Name of the device. This shows up in mDNS responses. If not specified, the gateway will autogenerate a service name.",
+                "pattern": "(?=^[^\\._]*[^\\x00\\._\\-]$|^$)(?:^[\\x00-\\x7F]|[\\xC2-\\xDF][\\x80-\\xBF]|\\xE0[\\xA0-\\xBF][\\x80-\\xBF]|[\\xE1-\\xEC\\xEE\\xEF][\\x80-\\xBF]{2}|\\xED[\\x80-\\x9F][\\x80-\\xBF]|\\xF0[\\x90-\\xBF][\\x80-\\xBF]{2}|[\\xF1-\\xF3][\\x80-\\xBF]{3}|\\xF4[\\x80-\\x8F][\\x80-\\xBF]{2}$)*"
+            },
+            "location": {
+                "type": "string",
+                "default": "",
+                "description": "Location of the device, This shows up in mDNS responses. By default this is empty.",
+                "pattern": "(?=^[^\\._][^\\-_]*[^\\._]*[^\\._]$|^[^\\._]?$)(?:^[\\x00-\\x7F]|[\\xC2-\\xDF][\\x80-\\xBF]|\\xE0[\\xA0-\\xBF][\\x80-\\xBF]|[\\xE1-\\xEC\\xEE\\xEF][\\x80-\\xBF]{2}|\\xED[\\x80-\\x9F][\\x80-\\xBF]|\\xF0[\\x90-\\xBF][\\x80-\\xBF]{2}|[\\xF1-\\xF3][\\x80-\\xBF]{3}|\\xF4[\\x80-\\x8F][\\x80-\\xBF]{2}$)*"
+            }
+        }
+    },
+    "chipType": {
+        "type": "integer",
+        "description": "Z-Wave chip type (5: 500-series, 7: 700-series)",
+        "enum": [5, 7]
+    },
+    "mode": {
+        "oneOf": [
+            {
+                "description": "Node is always listening to the network",
+                "type": "string",
+                "pattern": "^MODE_ALWAYSLISTENING$"
+            },
+            {
+                "description": "Node is frequently listening to the network",
+                "type": "string",
+                "pattern": "^MODE_FREQUENTLYLISTENING$"
+            },
+            {
+                "description": "Node is listening to the network only when neccessary",
+                "type": "string",
+                "pattern": "^MODE_NONLISTENING$"
+            },
+            {
+                "description": "Node is listening to the network only when neccessary and uses GW as Mailbox. Never use this value if Mailbox feature is disabled in Z/IP Gateway.",
+                "type": "string",
+                "pattern": "^MODE_MAILBOX$"
+            }
+        ],
+        "description" : "The listening pattern of the node. If omitted from the JSON file, the module NVM will be used to determine the correct value. Must be present in JSON if the module NVM is unavailable."
+    },
+    "nodeType": {
+        "oneOf": [
+            {
+                "type": "string",
+                "pattern": "BASIC_TYPE_CONTROLLER"
+            },
+            {
+                "type": "string",
+                "pattern": "BASIC_TYPE_STATIC_CONTROLLER"
+            },
+            {
+                "type": "string",
+                "pattern": "BASIC_TYPE_SLAVE"
+            },
+            {
+                "type": "string",
+                "pattern": "BASIC_TYPE_ROUTING_SLAVE"
+            }
+        ],
+        "description": "Basic device class identifier"
+    }
+  },
+
+
+  "comment": "------- DOCUMENT STARTS HERE -------",	
+
+  "type": "object",
+  "required" : ["ZGWBackupInfo","zgw"],
+  "properties" :{
+
+    "ZGWBackupInfo" : {
+      "description": "Information about the origin of this Z/IP gateway backup file.",
+      "type": "object",
+      "required": ["versionMajor","versionMinor"],
+      "properties": {
+          "versionMajor" : {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Major version of this backup file format."
+          },
+          "versionMinor" : {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Minor version of this backup file format."
+            },
+          "sourceZGWVersion": { 
+              "$ref": "#/definitions/versionString",
+              "description": "Z/IP gateway version from which this backup originates.",
+              "default": ""
+             },
+          "sourceProtocolVersion":{ 
+              "$ref": "#/definitions/versionString",
+              "description": "Protocol version which was running on the Z-Wave controller chip when this backup was generated.",
+              "default": ""
+         },
+          "sourceChipType":{
+              "$ref": "#/definitions/chipType",
+              "description": "Z-Wave controller chip type used with the Z/IP gateway when this backup was generated.",
+              "default": 5
+            },
+          "timestamp" : {
+              "$ref": "#/definitions/timeStamp",
+              "description" : "Date and time, when this file was generated.",
+              "default": 0
+            }
+      }
+    },
+
+    "zgw": {
+        "type": "object",
+        "description": "Gateway backup data specific to the gateway software.<br>Note that the IP address prefix of the gateway, unsolicited destination IP addresses & port number, and the MailBox Configuration settings should be provided in the 'zipgateway.cfg' configuration file.",
+        "required" : ["zwNetworkData","nodeList"],
+        "properties": {
+    "zwNetworkData": {
+      "description": "Granted security keys of the gateway.",
+      "type": "object",
+      "required": ["zwSecurity"],
+      "properties": {
+          "zwSecurity": {
+              "type": "object",
+              "required": ["ECDHPrivateKey"],
+              "properties": {
+                    "S0key" : { 
+                        "$ref": "#/definitions/keyString" ,
+                        "description": "The S0 network key. To use this key, the grantedKeys for the gateway itself must have bit 0 set, otherwise the gateway overwrites the key if it is SIS or becomes SIS.",
+                        "default": "00000000000000000000000000000000"
+                    },
+                    "S2UnauthenticatedKey" : {
+                        "$ref": "#/definitions/keyString" ,
+                        "description": "The S2 Unauthenticated network key. To use this key, the grantedKeys for the gateway itself must have bit 4 set, otherwise the gateway overwrites the key if it is SIS or becomes SIS.",
+                        "default": "00000000000000000000000000000000"
+                    },
+                    "S2AuthenticatedKey" : {
+                        "$ref": "#/definitions/keyString" ,
+                        "description": "The S2 Authenticated network key. To use this key, the grantedKeys for the gateway itself must have bit 5 set, otherwise the gateway overwrites the key if it is SIS or becomes SIS.",
+                        "default": "00000000000000000000000000000000"
+                    },
+                    "S2AccessKey" : {
+                        "$ref": "#/definitions/keyString",
+                        "description": "The S2 Access network key. To use this key, the grantedKeys for the gateway itself must have bit 6 set, otherwise the gateway overwrites the key if it is SIS or becomes SIS." ,
+                        "default": "00000000000000000000000000000000"
+                    },
+                    "S2AuthenticatedKeyLR" : {
+                        "$ref": "#/definitions/keyString" ,
+                        "description": "The S2 Authenticated Long Range network key. To use this key, the grantedKeys for the gateway itself must have bit 5 set, otherwise the gateway overwrites the key if it is SIS or becomes SIS.",
+                        "default": "00000000000000000000000000000000"
+                    },
+                    "S2AccessKeyLR" : {
+                        "$ref": "#/definitions/keyString",
+                        "description": "The S2 Access network Long Range key. To use this key, the grantedKeys for the gateway itself must have bit 6 set, otherwise the gateway overwrites the key if it is SIS or becomes SIS." ,
+                        "default": "00000000000000000000000000000000"
+                    },
+                  "ECDHPrivateKey" : { 
+                        "$ref": "#/definitions/keyString",
+                        "description": "The private part of the elliptic curve key used in S2 inclusions, which the gateway will use if no key is available in the NVR of the module. Any true random number here will do."
+                    }
+              }
+          }
+      }
+    },
+
+    "zipLanData": {
+        "type": "object",
+        "description": "LAN information of the gateway such as MAC addresses.",
+        "properties": {
+            "macAddress": {
+                "type": "string",
+                "description":  "The MAC address which the gateway uses on the LAN side. If not provided the gateway will autogenerate a new MAC address.",
+                "default": "00:00:00:00:00:00"
+            }
+        }
+    },
+
+    "zgwTemporaryAssociationData": {
+        "type": "object",
+        "description": "Temporary association data of the gateway.",
+        "properties": {
+            "virtualNodeList": {
+                "type": "array",
+                "description": "If omitted or fewer than MAX_TEMP_ASSOCIATIONS (default: 4) nodeIDs are listed, the gateway will create the remaining virtual nodes when starting up.",
+                "minItems": 1,
+                "maxItems": 4,
+                "items": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
+
+    "nodeList" :{
+      "description": "List of all Z-Wave nodes in the network.",
+      "type": "array",
+      "minItems": 1,
+      "items" :{
+          "type" : "object",
+          "required" : ["nodeUID"],
+          "properties" :{
+              "nodeUID": {
+                  "description": "A unique node identifier for the node. It can be either a DSK or a Network ID (i.e. Z-Wave home id and node id).",
+                  "type": "object",
+                    "properties": {
+                        "uidType":{ 
+                          "description" : "Indicate the type of the node identifier.", 
+                          "type" : "string",
+                          "enum": ["ZW Net ID", "DSK"]
+                        }
+                    },
+                    "if": { "properties": {"uidType" :{ "const": "DSK"} }},
+                    "then": {
+                        "properties": {
+                            "DSK": {
+                                "$ref": "#/definitions/DSKstring"
+                            }
+                        },
+                        "required": ["DSK"]
+                    },
+                    "else": {
+                        "properties":
+                        {
+                            "nodeId" :{"$ref": "#/definitions/nodeId"},
+                            "homeId" :{"$ref": "#/definitions/homeId" }
+                        },
+                        "required": ["nodeId", "homeId"]
+                    },
+                    "required": ["uidType"]
+              },
+              "isZGW": {
+                "description": "Used in offline import mode to identify the node id of the gateway. Note that this field is mandatory for offline import mode.",
+                "type":"boolean"
+              },
+              "zgwZWNodeData": {
+                  "type": "object",
+                  "description": "Information about the node. This is information beyond network protocol information.",
+                  "required": ["endpoints", "probeState"],
+                  "properties":{
+                      "grantedKeys" : {
+                            "$ref": "#/definitions/uint8",
+                            "default": 0,
+                            "description": "The bitmask of the keys that are assigned to the node.<br> Set bit 0 if the node is granted S0.<br> Set bit 4 if the node is granted S2_UNAUTHENTICATED.<br> Set bit 5 if the node is granted S2_AUTHENTICATED.<br> Set bit 6 if the node is granted S2_ACCESS.<br> All other bits must set to 0.<br> If not specified it's assumed that no keys are assigned to the node."
+                        },
+                      "nodeProdId": {
+                          "type": "object",
+                          "description": "Manufacturer specific properties of the node.",
+                          "properties": {
+                              "manufacturerId" : {
+                                  "$ref": "#/definitions/uint16",
+                                  "description": "Manufacturer ID as a decimal number."
+                                },
+                              "productType" : {
+                                  "$ref": "#/definitions/uint16",
+                                  "description": "Product Type ID as a decimal number."
+                                },
+                              "productId" : {
+                                  "$ref": "#/definitions/uint16",
+                                  "description": "Product ID as a decimal number."
+                                }
+                          },
+                          "required": ["manufacturerId", "productType", "productId"]
+                      },
+                      "endpoints":{
+                          "description": "Array of endpoints. The root device (node) is always endpointId=0.<br> Note that if the node has N endpoints, the length of this endpoint list must be N (including the root device).",
+                          "type" : "array",
+                          "minItems" : 1,
+                          "items" : {
+                              "type" : "object",
+                              "required": ["endpointId"],
+                              "properties" : {
+                                  "endpointId" : { 
+                                      "$ref": "#/definitions/uint8",
+                                      "description": "Endpoint identifier. A sequential increasing number for each endpoint. The root device (node) is always endpointId=0. If this is an aggregated endpoint (see property endpointAggregation) its ID must be larger than all non-aggregated endpoints."
+                                    },
+                                  "installerIcon": {
+                                    "$ref": "#/definitions/uint16",
+                                    "description": "Code of the Z-Wave+ installer icon.",
+                                    "default": 0
+                                    },
+                                  "userIcon": {
+                                    "$ref": "#/definitions/uint16",
+                                    "description": "Code of the Z-Wave+ installer icon.",
+                                    "default": 0
+                                    },
+                                  "endpointAggregation" : { 
+                                    "description": "If this field is defined this endpoint is interpreted as an aggregation of the non-aggregated endpoints listed here.",
+                                    "type": "array",
+                                    "default": [],
+                                    "items": {
+                                        "$ref": "#/definitions/uint8"
+                                    }
+                                  },
+                                  "endpointInfoFrames" :{
+                                    "description": "Command classes (CCs) that are supported by the endpoint.",
+                                    "type": "object",
+                                    "required": ["nonSecureNIF"],
+                                    "properties": {
+                                        "nonSecureNIF" : {
+                                            "description": "All non-securely supported CC identifiers represented as a string of two-digit hex numbers (no spaces between numbers), and the first two bytes (four-digit hex numbers) must contain the Generic and Specific Device Classes of the endpoint",
+                                            "$ref": "#/definitions/commandClassIdentifer" 
+                                        },
+                                        "secureNIF": {
+                                            "description": "All securely supported CC identifiers represented as a string of two-digit hex numbers (no spaces between numbers)", 
+                                            "$ref": "#/definitions/commandClassIdentifer" ,
+                                            "default": ""
+                                        }
+                                    }
+                                  },
+                                  "epMDNSData": {
+                                      "$ref": "#/definitions/mDNSinfo"
+                                  }
+                              }
+                          }
+                      },
+                      "probeState" : {
+                          "type": "object",
+                          "properties": {
+                              "state" : {
+                                 "type": "string", 
+                                 "description": "Probing state of the node.<br>If set to 'DONE', the gateway will not probe the node and all information for the node must be provided in this file. Otherwise the gateway may use incomplete node information.<br> If not all information about a node is available, set this field to 'RE-INTERVIEW' to have the gateway collect the data by re-probing the node.",
+                                 "default": "RE-INTERVIEW",
+                                 "enum": ["RE-INTERVIEW","DONE"]
+                              },
+                              "versionCap" : {
+                                "type": "string",
+                                "description": "Should contain the v3 version capabilities report frame content.",
+                                "default": "0x00"
+                              },
+                              "ZWplusRoleType": {
+                                    "type": "string", 
+                                    "description": "If the node role type is portable slave the field must set to 'portableSlave'.",
+                                    "default": ""
+                              },
+                              "ccVersions" : {
+                                  "description": "Versions of the command classes that the gateway controls and the node supports. E.g. VERSION, ZWAVE_PLUS_INFO, ...",
+                                  "$ref": "#/definitions/supportedCCsProperties",
+                                  "default" : [ 
+                                      { "commandClassId": 134,"version":0 },
+                                      { "commandClassId": 94, "version":0 },
+                                      { "commandClassId": 114,"version":0 },
+                                      { "commandClassId": 132,"version":0 },
+                                      { "commandClassId": 96, "version":0 },
+                                      { "commandClassId": 133,"version":0 },
+                                      { "commandClassId": 142,"version":0 }
+                                    ]
+                              }
+                          }
+                      },
+
+                      "zwNodeData":{
+                          "type": "object",
+                          "description": "The node id of the node. Required if a DSK has been used as nodeUID.",
+                          "properties": {
+                              "nodeId": {"$ref": "#/definitions/nodeId"}
+                          },
+                          "required": ["nodeId"]
+                      },
+
+                      "liveness":{ "type": "object",
+                          "properties": {
+                              "livenessState": {
+                                  "type": "string",
+                                  "description": "Liveness of the node; if the node has been heard within the configured time period, this field must be set to 'OK'. If the controller was not able to contact the node, the field must set to 'FAILING'.",
+                                  "default": "OK",
+                                  "enum": ["OK", "FAILING"]
+                                },
+                              "wakeUpInterval" : {
+                                  "type": "integer",
+                                  "description": "Node wake-up interval in seconds. Mandatory for sleeping nodes to avoid probing. If mailbox is disabled, the wake-up interval must be provided ",
+                                  "default":  4200
+                              },
+                              "lastAwake" : {
+                                  "$ref": "#/definitions/timeStamp",
+                                  "description": "Timestamp of the last received frame from the node.",
+                                  "default": 0
+                              },
+                              "lastUpdate" : {
+                                  "$ref": "#/definitions/timeStamp",
+                                  "description": "Timestamp for the last successful probe by the controller.",
+                                  "default": 0
+                              }
+                          }
+                      },
+                      "mode" :{
+                          "$ref": "#/definitions/mode",
+                          "description": "Mode field for indicating ALWAYSLISTENING, NONLISTENING, FREQUENTLYLISTENING, and MAILBOX. Note that this field is mandatory unless re-interview is probe state is RE-INTERVIEW"
+
+                      },
+                      "nodeType" :{
+                          "$ref": "#/definitions/nodeType",
+                          "description": "Identifier for basic device class. Note that this field is mandatory for offline import mode."
+                      }
+                  }
+              },
+
+              "ipData":{
+                  "type": "object",
+                  "properties" : {
+                      "mDNSNodeName": {
+                          "type": "string",
+                          "default": "",
+                          "description": "The mDNS host name of the node will be [mDNSNodeName].local. This will be generated by the gateway if not set.",
+                          "$ref": "#/definitions/mDNSinfo/properties/name"
+                        }
+                  }
+              },
+
+              "pvsData": {
+                  "type" : "object",
+                  "description": "Node provisioning data.",
+                  "properties" : {
+                      "bootstrappingMode": {
+                         "$ref": "#/definitions/uint8", 
+                         "description":"If the node is included using SmartStart, this field must set to 1"
+                      },
+                      "provisioningStatus" : {
+                          "type": "string",
+                          "description": "Provisioning status of the node:<br> 'INCLUDED': node is in the provisioning list,<br>'PENDING': inclusion is pending,<br>'DISABLED': the inclusion request is not accepted and the user must edit the PL,<br>'IGNORED': the inclusion request is not accepted and user action is needed to un-ignore the device.",
+                          "enum": ["INCLUDED", "PENDING", "DISABLED", "IGNORED"]
+
+                      },
+                      "requestedKeys" : {
+                          "$ref": "#/definitions/uint8",
+                          "description": "The bitmask of the keys that are requested via the node, 7th bit= 1 if the node is requested S0, 0 bit = 1 if the node is requested  S2_UNAUTHENTICATED, 1 bit=1 if the node is requested  S2_AUTHENTICATED, 2nd bit=1 if the node is requested S2_ACCESS, and other bits must set to 0."}
+                  }
+              }
+          }
+      }
+    }
+    }
+    }
+  }
+}

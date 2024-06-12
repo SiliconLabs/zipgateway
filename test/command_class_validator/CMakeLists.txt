@@ -1,0 +1,7 @@
+add_executable(test_command_class_validator test_command_class_validator.c
+  ${TEST_HELPERS}
+)
+
+target_link_libraries(test_command_class_validator ZWaveAnalyzer)
+
+add_test(command_class_validator test_command_class_validator)

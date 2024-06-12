@@ -1,0 +1,16 @@
+#!/bin/sh
+
+case "$1" in
+  up)
+    ifconfig $TUNDEV | grep "\s*UP" > /dev/null || {
+      ifconfig $TUNDEV up
+      brctl addif br-lan $TUNDEV
+      ip -6 route add $HANPREFIX via $LANIP
+      exit 0
+    }
+    ;;
+  down)
+    ip -6 route del $HANPREFIX via $LANIP
+    brctl delif br-lan $TUNDEV
+    ;;
+esac

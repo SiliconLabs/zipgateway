@@ -1,0 +1,259 @@
+/**
+ *
+ * \defgroup rd_sms Resource Directory State Machines
+ * \ingroup ZIP_Resource
+ *
+ * \brief Overview of the state machines used by the Resource Directory.
+ *
+ * The Resource Directory interviews (probes) a node on the PAN
+ * network to determine its properties.  This is essentially a long
+ * series of request-response exchanges.
+
+ * After the PAN side interview is completed, the Resource Directory
+ * triggers mDNS probing on the LAN side.
+
+ * As part of the interview, the Resource Directory also probes each
+ * endpoint of the node.  In the gateway data model, a node always has
+ * at least one endpoint, endpoint 0, which represents the node itself
+ * (the root device).  The endpoint probes are request-response
+ * exchanges, similar to the node probe.
+
+ * The interviewing process can be described with a set of state
+ * machines.
+
+ * The main state machine is the node probe (states \ref
+ * rd_node_state_t).  The node probe machine sub-contracts to the
+ * endpoint probe machines (states \ref rd_ep_state_t) and the mDNS
+ * state machine in some of the states.
+
+ * \note The "failing node" state machine is not illustrated.
+
+ * <b> Notes on the graphical representation </b>
+ *
+ * 1) Probing of endpoint 0 and of the "proper" endpoints (id > 0) are
+ * initiated from different states of the node probe and some of the
+ * steps of the endpoint probe machine depend on whether the endpoint
+ * is the gateway, the root device, or a proper endpoint. To
+ * simplify the graphs, each of these is drawn as a separate state
+ * machine.
+ *
+ * 2) Whether a failure to get a response should cause RD to fail the
+ * entire interview or just move on to the next request depends on
+ * each request.  The transitions both depend on the success status of
+ * the packet exchange and on the actual data in the response.  The
+ * mDNS probe never causes failure.  Therefore, it becomes difficult to model
+ * the response handling as a transition in a state diagram without
+ * having a lot of attributes on each transition.
+ *
+ * Instead, the states of the enums are modeled with up to three
+ * sub-states in the diagrams:
+ *
+ * - a base state for each possible interview step,
+ * - a send state, which is entered if the interview step is
+ * sometimes valid for this specific endpoint, and
+ * - a response-waiting state (callback), that waits for the response.
+ *
+ * The send state is only drawn if sending is conditional.  In the
+ * diagrams, the base state is linked to the enum, whereas the
+ * callback state is linked to the callback function.
+
+ * <b> Reading guide </b>
+ *
+ * <i> States </i>
+ *
+ * The mDNS state machine and endpoint probe machines are indicated
+ * with a green box "state" in the node probe machine.
+ *
+ * Callback states are blue.
+ * When information is stored in a callback state, it is implied that this
+ * only happens if the response is valid.
+ *
+
+ * <i>Transitions</i>
+ *
+ * Asynchronous transitions are dashed, synchronous transitions are solid.
+ *
+ * Synchronous transitions in this model are typically failure-to-send
+ * or a transition from a base state to a callback state or from a
+ * callback state to the next request state.
+ *
+ * Transitions can be asynchronous in three ways: callbacks from
+ * network communications, timeouts, or mDNS completion events.
+ *
+ * Transitions on protocol status results are blue.
+ *
+ * Transitions on timeouts are red.
+ *
+ * Transitions to \ref STATUS_PROBE_FAIL or \ref EP_STATE_PROBE_FAIL
+ * state are shown with a tee instead of an arrow.  To simplify the
+ * drawings, the fail states are not shown.
+ *
+ */
+
+
+/**
+ * \defgroup node_probe Node Probe Machine - Probing Nodes in the PAN Network
+ * \ingroup rd_sms
+ *
+
+\dot "Resource Directory State Machine for Node Probing."
+digraph nodeprobe {
+
+  CREATED [label="CREATED", URL="\ref STATUS_CREATED", penwidth=2]
+  PROBE_NODE_INFO [label="PROBE_NODE_INFO", URL="\ref STATUS_PROBE_NODE_INFO", penwidth=1]
+  probe_nif_ep0_done [label="PROBE_NIF_ep0_done", URL="\ref STATUS_PROBE_NODE_INFO", penwidth=1,
+                     color=blue]
+  rd_ep0_sm [label="Wait for\nEP 0 Probe State Machine", URL="\ref ep0_probe",
+             penwidth=1, color=green, shape=box]
+
+  PROBE_PRODUCT_ID [label="PROBE_PRODUCT_ID", URL="\ref STATUS_PROBE_PRODUCT_ID", penwidth=1, shape=""]
+  ENUMERATE_ENDPOINTS [label="ENUMERATE_ENDPOINTS\nCheck Mul Ch CC support",
+                       URL="\ref STATUS_ENUMERATE_ENDPOINTS", penwidth=1]
+  pb_eps_cb [label="probe_eps_cb\nallocate ep database entries", URL="\ref rd_ep_get_callback",
+                     color=blue]
+  CHECK_WU_CC_VERSION [label="CHECK_WU_CC_VERSION", URL="\ref STATUS_CHECK_WU_CC_VERSION", penwidth=1]
+  wu_cc_version_cb [label="wu_cc_version_cb",
+                    URL="\ref rd_wu_cc_version_callback", penwidth=1,
+                    color=blue]
+
+  GET_WU_CAP [label="GET_WU_CAP\nRequest WU cap", URL="\ref STATUS_GET_WU_CAP", penwidth=1]
+  rd_cap_wake_up_cb [label="rd_cap_wake_up_cb\nset wui in database",
+                     URL="\ref rd_cap_wake_up_callback", penwidth=1,
+                     color=blue]
+
+  SET_WAKE_UP_INTERVAL [label="SET_WAKE_UP_INTERVAL\nsend wui set frame", URL="\ref STATUS_SET_WAKE_UP_INTERVAL", penwidth=1]
+  ASSIGN_RETURN_ROUTE [label="ASSIGN_RETURN_ROUTE\nassign return route", URL="\ref STATUS_ASSIGN_RETURN_ROUTE", penwidth=1]
+#  AssignReturnRoute_cb [label="AssignReturnRoute_cb", URL="\ref AssignReturnRouteCallback",
+#                     color=blue]
+
+  PROBE_WAKE_UP_INTERVAL [label="PROBE_WAKE_UP_INTERVAL", URL="\ref STATUS_PROBE_WAKE_UP_INTERVAL", penwidth=1]
+  rd_probe_wakeup_cb [label="rd_probe_wakeup_cb", URL="\ref rd_probe_wakeup_callback",
+                     color=blue]
+
+  PROBE_ENDPOINTS [label="PROBE_ENDPOINTS", URL="\ref STATUS_PROBE_ENDPOINTS", penwidth=1]
+  rd_eps_sm [label="Wait for\nEP <i> (>0) Probe State Machine", URL="\ref epgt0_probe",
+             penwidth=1, color=green, shape=box]
+  rd_eps_sm_mdns [label="Wait for\nEP <i> (>0) mDNS State Machine", URL="\ref rd_ep_probe_update",
+                  penwidth=1, color=green, shape=box]
+
+  MDNS_PROBE [label="MDNS_PROBE", URL="\ref STATUS_MDNS_PROBE", penwidth=1, color=""]
+  mdns_sm_wait [label="Wait for\nmDNS State Machine", URL="\ref ZIP_MDNS", color=green, shape=box]
+  MDNS_EP_PROBE [label="MDNS_EP_PROBE", URL="\ref STATUS_MDNS_EP_PROBE",
+                color="", shape="", penwidth=1]
+
+  DONE [label="DONE", URL="\ref STATUS_DONE", penwidth=2]
+#  PROBE_FAIL [label="PROBE_FAIL", URL="\ref STATUS_PROBE_FAIL", penwidth=2]
+#  FAILING [label="FAILING", URL="\ref STATUS_FAILING", penwidth=2]
+
+###### NIF, etc ######
+
+CREATED -> CREATED [label="Probe machine busy"]
+CREATED -> PROBE_NODE_INFO [label="Probe machine idle"]
+
+PROBE_NODE_INFO ->  probe_nif_ep0_done [label="ep0 state is DONE"]
+PROBE_NODE_INFO ->  rd_ep0_sm [label="ep0 state is not final"]
+PROBE_FAIL[style=invis]
+PROBE_NODE_INFO -> PROBE_FAIL [arrowhead=tee, label="ep0 state is FAIL"]
+
+rd_ep0_sm -> PROBE_NODE_INFO [label="ep0 state is final", style=dashed]
+
+probe_nif_ep0_done -> DONE [label="INFO only flag", URL="\ref NODE_FLAG_INFO_ONLY"]
+probe_nif_ep0_done -> PROBE_PRODUCT_ID [label="no flag"]
+
+PROBE_PRODUCT_ID -> ENUMERATE_ENDPOINTS [label="Node is GW or\nManufac. CC not supported"]
+PROBE_PRODUCT_ID -> probe_vendor_cb [label="Request Manufac. Spec.", style=dashed]
+
+probe_vendor_cb -> ENUMERATE_ENDPOINTS [label="Request failed", arrowhead=tee,
+                   color=blue]
+probe_vendor_cb -> ENUMERATE_ENDPOINTS [label="Reply OK", color=blue]
+
+ENUMERATE_ENDPOINTS -> CHECK_WU_CC_VERSION [label="Node is GW or\nhas no eps"]
+PROBE_FAIL0a[style=invis]
+ENUMERATE_ENDPOINTS -> PROBE_FAIL0a [label="Tx fail", arrowhead=tee]
+ENUMERATE_ENDPOINTS -> pb_eps_cb [label="Node has eps\nRequest MulCh Eps", style=dashed]
+
+pb_eps_cb -> CHECK_WU_CC_VERSION [label="Reply OK", color=blue]
+PROBE_FAIL1[style=invis]
+pb_eps_cb -> CHECK_WU_CC_VERSION [label="Request fail or\nallocation fail", arrowhead=tee,
+                          color=blue]
+
+###### MAILBOX ######
+
+CHECK_WU_CC_VERSION -> PROBE_ENDPOINTS
+                    [label="Node is not\nMODE_MAILBOX", URL="\ref MODE_MAILBOX"]
+#                    [label="No Wake-Up CC in node\nor no mailbox in GW"]
+CHECK_WU_CC_VERSION -> wu_cc_version_cb
+                    [label="Node is MODE_MAILBOX\nand was just incl. by GW\nRequest WU Version CC",
+                    URL="\ref MODE_MAILBOX",
+                    style=dashed]
+CHECK_WU_CC_VERSION -> PROBE_WAKE_UP_INTERVAL
+                    [label="Node is\nMODE_MAILBOX\nand is known\nor is incl by SUC",
+                    URL="\ref MODE_MAILBOX"]
+
+wu_cc_version_cb -> GET_WU_CAP [label="WU version >= 2", color=blue]
+wu_cc_version_cb -> SET_WAKE_UP_INTERVAL [label="WU version == 1" color=blue]
+PROBE_FAIL2[style=invis]
+wu_cc_version_cb -> PROBE_FAIL2 [label="Request failed", arrowhead=tee, color=blue]
+
+PROBE_FAIL3a[style=invis]
+GET_WU_CAP -> rd_cap_wake_up_cb [label="Tx OK", style=dashed]
+GET_WU_CAP -> PROBE_FAIL3a [label="Tx fail", arrowhead=tee]
+
+rd_cap_wake_up_cb -> ASSIGN_RETURN_ROUTE [label="Request failed", arrowhead=tee, color=blue]
+rd_cap_wake_up_cb -> SET_WAKE_UP_INTERVAL [label="Reply OK", color=blue]
+
+SET_WAKE_UP_INTERVAL -> ASSIGN_RETURN_ROUTE [label="Tx OK, Reply OK", style=dashed,
+                                            color=blue,
+                                     URL="\ref rd_set_wu_interval_callback"]
+PROBE_FAIL4[style=invis]
+SET_WAKE_UP_INTERVAL -> PROBE_FAIL4 [label="Tx fail", arrowhead=tee]
+SET_WAKE_UP_INTERVAL -> ASSIGN_RETURN_ROUTE [label="Request failed", style=dashed,
+                                     arrowhead=tee, color=blue,
+                                     URL="\ref rd_set_wu_interval_callback"]
+
+ASSIGN_RETURN_ROUTE -> PROBE_WAKE_UP_INTERVAL [label="Tx OK, Reply OK",
+                                               style=dashed, color=blue,
+                                             URL="\ref AssignReturnRouteCallback"]
+PROBE_FAIL5[style=invis]
+ASSIGN_RETURN_ROUTE -> PROBE_FAIL5 [label="Tx fail", arrowhead=tee]
+ASSIGN_RETURN_ROUTE -> PROBE_WAKE_UP_INTERVAL [label="Request failed", style=dashed,
+                                   arrowhead=tee, color=blue]
+
+PROBE_WAKE_UP_INTERVAL -> rd_probe_wakeup_cb [label="Request WU int.", style=dashed]
+
+rd_probe_wakeup_cb -> PROBE_ENDPOINTS [label="Reply OK", color=blue]
+rd_probe_wakeup_cb -> PROBE_ENDPOINTS [label="Request failed", arrowhead=tee,
+                                   color=blue]
+
+###### PROBE ENDPOINTS ######
+
+PROBE_FAIL7[style=invis]
+PROBE_ENDPOINTS -> PROBE_FAIL7 [label="EP <i> has state FAIL", arrowhead=tee]
+PROBE_ENDPOINTS -> rd_eps_sm [label="EP <i> state is not final"]
+PROBE_ENDPOINTS -> MDNS_PROBE [label="All eps have state DONE"]
+
+rd_eps_sm -> PROBE_ENDPOINTS [label="EP <i> state is final", style=dashed]
+
+###### MDNS ######
+
+MDNS_PROBE -> mdns_sm_wait [label="mDNS idle\nStart mDNS probe",
+                            URL="\ref mdns_node_name_probe"]
+MDNS_PROBE -> MDNS_EP_PROBE [label="mDNS busy"]
+
+mdns_sm_wait -> MDNS_EP_PROBE [label="mDNS probe status OK", style=dashed,
+                               URL="\ref rd_node_name_probe_done"]
+mdns_sm_wait -> MDNS_PROBE_wait [label="mDNS probe status not OK\nAdjust name\nStart timer",
+                            URL="\ref rd_node_name_probe_done",
+                            style=dashed]
+
+MDNS_PROBE_wait -> MDNS_PROBE [label="Node mDNS timeout", style=dashed, color=red]
+
+MDNS_EP_PROBE -> DONE [label="No eps in state MDNS_PROBE"]
+MDNS_EP_PROBE -> rd_eps_sm_mdns [label="EP <i> in state MDNS_PROBE"]
+
+rd_eps_sm_mdns -> MDNS_EP_PROBE [label="EP <i> state is DONE", style=dashed]
+}
+
+\enddot
+
+*/

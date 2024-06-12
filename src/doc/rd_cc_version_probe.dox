@@ -1,0 +1,65 @@
+/**
+ *
+ * \defgroup cc_version_probe Command Class Version Probing State Machines
+ * \ingroup rd_sms
+ *
+ * \brief Overview of the state machines used by the version probing.
+ *
+ * <b> Reading guide </b>
+ *
+ * Version probing is designed to be triggered independently from the rest of
+ * required probing process. As of Version V3, it's specified to probe the
+ * version of controlled command class if it has multiple versions.
+ *
+ * The version probing state machine will go through a hardcoded list of
+ * controlled command class and probe for version towards each endpoint. Then
+ * based on the result, Version Capabilities Get and Z-Wave Software Version Get
+ * will be sent.
+ *
+ * During the version probing, one state struct is maintained in each node entry
+ * in order to have asynchronous probing. The result coming back from each
+ * endpoint is aggregated into the node_cc_version in the node those endpoints
+ * belong to since the versions are assumed to be the same for endpoints if they
+ * support the same command class.
+ *
+ * If the version of one command class is probed for one endpoint of the node,
+ * it will be skipped for the version probing of next endpoint.
+ *
+ * If one version probing is failed, e.g. no response, invalid version, not the
+ * requested command class, it will be skipped and marked as
+ * RD_NODE_FLAG_PROBE_FAILED.
+ *
+
+\dot "State Machine for Version Probing."
+digraph nodeprobe {
+
+  IDLE [label="IDLE", URL="\ref PCV_IDLE", penwidth=2]
+  SEND_VERSION_CC_GET [label="SEND_VERSION_CC_GET", URL="\ref PCV_SEND_VERSION_CC_GET", penwidth=1]
+  LAST_REPORT [label="LAST_REPORT", URL="\ref PCV_LAST_REPORT", penwidth=1]
+  CHECK_IF_V3 [label="CHECK_IF_V3", URL="\ref PCV_CHECK_IF_V3", penwidth=1]
+  SEND_VERSION_CAP_GET [label="SEND_VERSION_CAP_GET", URL="\ref PCV_SEND_VERSION_CAP_GET", penwidth=1]
+  SEND_VERSION_ZWS_GET [label="SEND_VERSION_ZWS_GET", URL="\ref PCV_SEND_VERSION_ZWS_GET", penwidth=1]
+  VERSION_PROBE_DONE [label="VERSION_PROBE_DONE", URL="\ref PCV_VERSION_PROBE_DONE", penwidth=1]
+
+  IDLE -> SEND_VERSION_CC_GET [label="START", URL="PCV_EV_START"]
+  SEND_VERSION_CC_GET -> LAST_REPORT [label="VERSION_CC_REPORT_RECV", URL="PCV_EV_VERSION_CC_REPORT_RECV"]
+  SEND_VERSION_CC_GET -> LAST_REPORT [label="CC_PROBED", URL="PCV_EV_CC_PROBED"]
+  SEND_VERSION_CC_GET -> LAST_REPORT [label="CC_NOT_SUPPORT", URL="PCV_EV_CC_NOT_REPORT"]
+  SEND_VERSION_CC_GET -> LAST_REPORT [label="VERSION_CC_CALLBACK_FAIL", URL="PCV_EV_VERSION_CC_CALLBACK_FAIL"]
+  LAST_REPORT -> SEND_VERSION_CC_GET [label="NOT_LAST", URL="PCV_EV_NOT_LAST"]
+  LAST_REPORT -> CHECK_IF_V3 [label="VERSION_CC_DONE", URL="PCV_EV_VERSION_CC_DONE"]
+  CHECK_IF_V3 -> SEND_VERSION_CAP_GET [label="IS_V3", URL="PCV_EV_IF_V3"]
+  CHECK_IF_V3 -> VERSION_PROBE_DONE [label="NOT_V3", URL="PCV_EV_NOT_V3"]
+  SEND_VERSION_CAP_GET -> SEND_VERSION_ZWS_GET [label="VERSION_CAP_REPORT_RECV", URL="PCV_EV_VERSION_CAP_REPORT_RECV"]
+  SEND_VERSION_CAP_GET -> VERSION_PROBE_DONE [label="CAP_PROBED", URL="PCV_EV_CAP_PROBED"]
+  SEND_VERSION_CAP_GET -> VERSION_PROBE_DONE [label="VERSION_CAP_CALLBACK_FAIL", URL="PCV_EV_VERSION_CAP_CALLBACK_FAIL"]
+  SEND_VERSION_ZWS_GET -> VERSION_PROBE_DONE [label="ZWS_NOT_SUPPORT", URL="PCV_EV_ZWS_NOT_SUPPORT"]
+  SEND_VERSION_ZWS_GET -> VERSION_PROBE_DONE [label="VERSION_ZWS_REPORT_RECV", URL="PCV_EV_VERSION_ZWS_REPORT_RECV"]
+  SEND_VERSION_ZWS_GET -> VERSION_PROBE_DONE [label="ZWS_PROBED", URL="PCV_EV_ZWS_PROBED"]
+  SEND_VERSION_ZWS_GET -> VERSION_PROBE_DONE [label="VERSION_ZWS_CALLBACK_FAIL", URL="PCV_EV_VERSION_ZWS_CALLBACK_FAIL"]
+
+}
+
+\enddot
+
+*/

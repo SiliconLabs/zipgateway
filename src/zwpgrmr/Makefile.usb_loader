@@ -1,0 +1,17 @@
+# This makefile will take the USB loader Intel Hex files in the format released 
+# by the embedded team and convert to a C header needed by the zwpgrmr tool.
+# To update, insert new versions of the Intel Hex files and  run 
+#   make -f Makefile.usb_loader
+
+default: usb_loader_part1.h usb_loader_part2.h
+
+%.h : %.bin
+	mv $< `basename $< .bin`
+	xxd -i `basename $< .bin` $@
+	rm `basename $< .bin`
+
+%.bin : %.hex
+	srec_cat $< -intel -fill 0xFF 0x00 2048 -o $@ -binary
+
+clean:
+	-rm usb_loader_part1.h usb_loader_part2.h usb_loader_part1 usb_loader_part2 || true
