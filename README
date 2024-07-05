@@ -1,4 +1,13 @@
-# How to build documentation on Ubuntu 20.04.5 LTS (Focal Fossa)
+# zipgateway
+
+## Licensing
+
+ZipGateway is covered by one of several different licenses.
+The default license is the [Master Software License Agreement (MSLA)](https://www.silabs.com/about-us/legal/master-software-license-agreement), which applies unless otherwise noted. 
+Refer to [LICENSE](./LICENSE) for more details.
+
+
+## How to build documentation on Ubuntu 20.04.5 LTS (Focal Fossa)
 ----------------------------
 ```bash
 $ sudo apt-get install -y doxygen graphviz mscgen roffit perl git python3 cmake\
