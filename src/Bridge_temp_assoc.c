@@ -103,8 +103,8 @@ void temp_assoc_unpersist_virtual_nodeids(void)
   temp_assoc_virtual_nodeid_count =
       rd_datastore_unpersist_virtual_nodes(
           temp_assoc_virtual_nodeids, MAX_CLASSIC_TEMP_ASSOCIATIONS);
-  LOG_PRINTF("temp_assoc_virtual_nodeids (count=%d): %u %u %u ... %u\n", temp_assoc_virtual_nodeid_count,
-             temp_assoc_virtual_nodeids[0], temp_assoc_virtual_nodeids[1], temp_assoc_virtual_nodeids[2],
+  LOG_PRINTF("temp_assoc_virtual_nodeids (count=%d): %u ... %u\n",
+             temp_assoc_virtual_nodeid_count, temp_assoc_virtual_nodeids[0],
              temp_assoc_virtual_nodeids[MAX_CLASSIC_TEMP_ASSOCIATIONS - 1]);
 }
 

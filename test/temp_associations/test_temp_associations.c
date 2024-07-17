@@ -21,7 +21,7 @@
 extern nodeid_t MyNodeID;
 extern const char* linux_conf_database_file;
 
-static nodeid_t virtual_nodes[MAX_CLASSIC_TEMP_ASSOCIATIONS] = {2, 3, 4, 5};
+static nodeid_t virtual_nodes[MAX_CLASSIC_TEMP_ASSOCIATIONS] = {2};
 static BOOL call_next_ctimer_callback_once = FALSE;
 static ZW_SendDataAppl_Callback_t the_sd_callback;
 static void* the_sd_callback_user;

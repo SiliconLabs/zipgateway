@@ -167,10 +167,10 @@ void verify_eeprom_file_NoProbe_json()
    check_equal(rd_zgw_nodeid_get(), 1, "node ID");
    size_t temp_assoc_virtual_nodeid_count = 0;
    nodeid_t temp_assoc_virtual_nodeids[PREALLOCATED_VIRTUAL_NODE_COUNT] = {0};
-   nodeid_t expected_virtual_nodeids[PREALLOCATED_VIRTUAL_NODE_COUNT] = {6, 7, 8, 9};
+   nodeid_t expected_virtual_nodeids[PREALLOCATED_VIRTUAL_NODE_COUNT] = {6};
    temp_assoc_virtual_nodeid_count = rd_datastore_unpersist_virtual_nodes(
        temp_assoc_virtual_nodeids, PREALLOCATED_VIRTUAL_NODE_COUNT);
-   check_equal(temp_assoc_virtual_nodeid_count, 4,
+   check_equal(temp_assoc_virtual_nodeid_count, 1,
                "Temporary association virtual node id count");
    check_mem((uint8_t*)expected_virtual_nodeids, (uint8_t*)temp_assoc_virtual_nodeids,
              PREALLOCATED_VIRTUAL_NODE_COUNT,

@@ -154,7 +154,7 @@ void verify_eeprom_file()
    check_true(rd_zgw_nodeid_get() == MyNodeID, "node ID");
    size_t temp_assoc_virtual_nodeid_count = 0;
    nodeid_t temp_assoc_virtual_nodeids[PREALLOCATED_VIRTUAL_NODE_COUNT] = {0};
-   nodeid_t expected_virtual_nodeids[PREALLOCATED_VIRTUAL_NODE_COUNT] = {14, 15, 16};
+   nodeid_t expected_virtual_nodeids[PREALLOCATED_VIRTUAL_NODE_COUNT] = {14};
    temp_assoc_virtual_nodeid_count = rd_datastore_unpersist_virtual_nodes(
        temp_assoc_virtual_nodeids, PREALLOCATED_VIRTUAL_NODE_COUNT);
    check_true(temp_assoc_virtual_nodeid_count == 3,
