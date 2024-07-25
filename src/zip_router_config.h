@@ -305,7 +305,18 @@ struct router_config {
    *  sets the LBT Threshold anytime ZIPGW resets the Z-Wave chip. 
    *  ZW_SetListenBeforeTalkThreshold()
    */
-  uint8_t zw_lbt; 
+  uint8_t zw_lbt;
+
+  /** Configuration parameter single_classic_temp_association in zipgateway.cfg
+   *
+   * Allows to limit to a single classical temporal association. By default, the
+   * Z/IP Gateway uses four classical temporal associations. If the parameter
+   * `single_classic_temp_association` is set, the Z/IP Gateway will use
+   * only one classical temporal associations.
+   * Allowed values are 1=enable or 0=disable (default).
+   * This is an experimental feature.
+   */
+  uint8_t single_classic_temp_association;
 };
 
 /**
