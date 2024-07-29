@@ -22,10 +22,15 @@ packages+=doxygen xsltproc plantuml roffit
 packages+=radvd parprouted bridge-utils net-tools zip unzip
 # TODO: https://www.tcpdump.org/release/libpcap-1.5.3.tar.gz
 
+# libzwaveip deps
+packages+=libbsd-dev libncurses5-dev libavahi-client-dev
+
 cmake?=cmake
 ctest?=ctest
+#cmake_options?=-DENABLE_CODE_COVERAGE=True
+cmake_options+=-DCMAKE_VERBOSE_MAKEFILE=True
 cmake_options+=-DCPACK_DEBIAN_PACKAGE_ARCHITECTURE=${target_debian_arch}
-cmake_options?=-DENABLE_CODE_COVERAGE=True
+
 PLANTUML_JAR_PATH?=/usr/share/plantuml/plantuml.jar
 export PLANTUML_JAR_PATH
 
