@@ -1,0 +1,11 @@
+build/
+build_*/
+pkgconfig.h
+
+# Xcode related
+.DS_Store
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata
+
+.vscode
