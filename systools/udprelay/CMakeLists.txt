@@ -7,10 +7,14 @@ ExternalProject_Add(
 
 add_definitions( -D_GNU_SOURCE )
 
-include_directories( ${CMAKE_BINARY_DIR}/stage/include )
 link_directories( ${CMAKE_BINARY_DIR}/stage/lib )
 
 add_executable( udprelay udprelay.c)
+
+target_include_directories(udprelay
+  PUBLIC
+  ${CMAKE_BINARY_DIR}/stage/include
+)
 target_link_libraries( udprelay libpcap.a )
 add_dependencies(udprelay libpcap)
 
