@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 2.9)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
 #TODO better versioning here when releasing
-set(VERSION_SHORT "latest")
+
 
 # Enforce build type
 if(NOT CMAKE_BUILD_TYPE)
@@ -51,23 +51,25 @@ find_package(LibXml2)
 
 message (STATUS "openssl libraries: ${OPENSSL_LIBRARIES}")
 
-# Figure out a proper versioning for the build
-if(NOT GIT_FOUND)
-  find_package(Git QUIET)
-endif()
-
-execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --match "ver*"
-  OUTPUT_VARIABLE VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-if(VERSION MATCHES "^ver")
-  MESSAGE(STATUS "log: found git tag: ${VERSION}")
+if(NOT PROJECT_IS_TOP_LEVEL)
+  set(VERSION_SHORT "latest")
+  set(CMAKE_PROJECT_NAME "libzwaveip")
 else()
-  if(NOT DEFINED VERSION)
-    set(VERSION ver0_0.0)
+
+  # Figure out a proper versioning for the build
+  if(NOT GIT_FOUND)
+    find_package(Git QUIET)
   endif()
+
+  execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --match "ver*"
+    OUTPUT_VARIABLE VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()
 
-#parse the version information into pieces.
+if(NOT VERSION MATCHES "^ver")
+  set(VERSION ver0_0.00)
+endif()
+
+message(STATUS "log: parse the version information into pieces: ${VERSION}")
 string(REGEX REPLACE "^ver([0-9]+)_.*" "\\1" VERSION_MAJOR "${VERSION}")
 string(REGEX REPLACE "^ver[0-9]+_([0-9]+).*" "\\1" VERSION_MINOR "${VERSION}")
 string(REGEX REPLACE "^ver[0-9]+_[0-9]+.[0-9]+[0-9,R,C,_]*-.[0-9]*-(.*)" "\\1" VERSION_SHA1 "${VERSION}")
@@ -83,6 +85,7 @@ set(VERSION_SHORT "${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}")
 if (DEFINED VERSION_SHA1)
   set(VERSION_SHORT "${VERSION_SHORT}-${VERSION_SHA1}")
 endif()
+
 message(STATUS "VERSION_MAJOR: " ${VERSION_MAJOR})
 message(STATUS "VERSION_MINOR: " ${VERSION_MINOR})
 message(STATUS "PATCH_LEVEL: " ${PATCH_LEVEL})
@@ -90,7 +93,7 @@ message(STATUS "VERSION_TWEAK: " ${VERSION_TWEAK})
 message(STATUS "VERSION_SHA1: " ${VERSION_SHA1})
 message(STATUS "VERSION_SHORT: " ${VERSION_SHORT})
 
-configure_file(pkgconfig.h.cmake.in ${CMAKE_CURRENT_SOURCE_DIR}/pkgconfig.h)
+configure_file(pkgconfig.h.cmake.in pkgconfig.h)
 
 add_subdirectory( libzwaveip )
 add_subdirectory( xml )

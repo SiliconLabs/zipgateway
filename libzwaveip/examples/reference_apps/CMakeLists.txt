@@ -20,12 +20,14 @@ target_include_directories(reference_client
   ../..
   ../../libedit
   ${LIBXML2_INCLUDE_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}/../..
 )
 
 target_include_directories(reference_listener
   PUBLIC
   listener
   ../..
+  ${CMAKE_CURRENT_BINARY_DIR}/../..
 )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
