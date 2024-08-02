@@ -1,6 +1,4 @@
 add_subdirectory( test )
-include_directories( . )
-include_directories(${LIBXML2_INCLUDE_DIR})
 
 include(FindPythonInterp)
 find_package(LibXml2)
@@ -18,5 +16,11 @@ add_custom_command(OUTPUT zw_gen_hdr.c
 
 add_library(parse_xml parse_xml.c)
 add_library(zw_cmd_tool zw_cmd_tool.c zw_gen_hdr.c)
+
+target_include_directories(parse_xml
+  PUBLIC
+  ${LIBXML2_INCLUDE_DIR}
+  ../include
+)
 target_link_libraries(zw_cmd_tool zwaveip)
 
