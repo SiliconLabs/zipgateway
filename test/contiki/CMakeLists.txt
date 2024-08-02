@@ -65,7 +65,7 @@ target_include_directories(zipgateway-contiki-test PUBLIC
   ${CMAKE_CURRENT_BINARY_DIR}
   ${LibUSB_INCLUDE_DIRS}
   ${TS2_INCLUDE_DIRS}
-  ${ZWAVE_INCLUDE_DIR}
+  ../../Z-Wave/include
   serialapi
   ${CMAKE_SOURCE_DIR}/src-gen
   zwpgrmr

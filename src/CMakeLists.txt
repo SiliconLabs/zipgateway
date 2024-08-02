@@ -118,6 +118,7 @@ else()
 
     add_library(zipgateway-lib ${GW_SRC})
     target_include_directories(zipgateway-lib PUBLIC 
+      ${LibUSB_INCLUDE_DIRS}
       ${CMAKE_CURRENT_BINARY_DIR} 
       ${TS2_INCLUDE_DIRS}
       ${ZWAVE_INCLUDE_DIR}
@@ -128,6 +129,7 @@ else()
       utls
       ${CMAKE_SOURCE_DIR}
       ${CMAKE_SOURCE_DIR}/src
+      ..
       )
     target_link_libraries(zipgateway-lib PUBLIC ZWaveAnalyzer contiki  ${S2_LIBRARIES} OpenSSL::SSL OpenSSL::Crypto ${LibUSB_LIBRARIES} 
     sqlite3)

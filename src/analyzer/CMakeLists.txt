@@ -15,4 +15,8 @@ add_custom_command( OUTPUT get_list.c
 # include_directories(../../contiki/core ../../contiki/platform/linux)
 
 add_library( ZWaveAnalyzer command_class_validator.c get_list.c CommandAnalyzer.c )
-target_include_directories( ZWaveAnalyzer PUBLIC . )
+target_include_directories( ZWaveAnalyzer
+  PUBLIC
+  .
+  ../../Z-Wave/include
+)

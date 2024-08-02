@@ -95,7 +95,6 @@ set(ZGW_SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 set(LIBS2 "${CMAKE_CURRENT_SOURCE_DIR}/libs2" )
 
 set(S2_LIBRARIES s2_controller s2crypto aes)
-include_directories(.)
 
 add_subdirectory( sqlite )
 add_subdirectory( libs2 )
@@ -158,20 +157,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/files/zgw_recover.sh.in ${CMAKE_CURRE
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/files/zgw_backup.sh.in ${CMAKE_CURRENT_BINARY_DIR}/files/zgw_backup.sh @ONLY)
 
 set(CONTIKI contiki )
-
-include_directories(
-${LibUSB_INCLUDE_DIRS}
-${TS2_INCLUDE_DIRS}
-${ZWAVE_INCLUDE_DIR}
-src/serialapi
-src-gen
-src/zwpgrmr
-src/transport
-src/utls
-src/zgw_backup
-src
-.
-)
 
 add_definitions(  -DSERIAL_LOG -DSUPPORTS_MDNS
 -DSECURITY_SUPPORT -DCONTROLLER_CHANGE_SUPPORT -D__ROUTER_VERSION__

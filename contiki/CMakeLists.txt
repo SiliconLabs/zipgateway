@@ -52,7 +52,14 @@ set(CONTIKI_SRC
 )
 add_library(contiki-core ${CONTIKI_CORE_SRC} )
 
-target_include_directories(contiki-core PUBLIC ${CONTIKI_INC})
+target_include_directories(contiki-core PUBLIC
+  ${CONTIKI_INC}
+  ..
+  ../Z-Wave/include
+  ../src
+  ../src/transport
+  ../src/utls
+)
 
 # Add the ZGW-specific stuff to the basic contiki stuff
 target_compile_definitions(contiki-core
@@ -77,8 +84,12 @@ if (NOT ANDROID)
   add_library(
     contiki-main
     platform/linux/contiki-main.c
-)
-    target_include_directories(contiki-main PUBLIC ${CONTIKI_INC})
+  )
+  target_include_directories(contiki-main PUBLIC
+    ${CONTIKI_INC}
+    ..
+    ../src
+  )
     target_compile_definitions(contiki-main PUBLIC -DPROJECT_CONF_H=\"project-conf.h\" -DCONTIKI_TARGET_LINUX -DUIP_CONF_IPV6=1 -DAUTOSTART_ENABLE )
 endif()
 

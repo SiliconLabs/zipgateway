@@ -24,6 +24,7 @@ set(TEST_HELPERS
 add_definitions(-DUIP_CONF_IPV6=1 -DAUTOSTART_ENABLE -DUIP_CONF_ROUTER=1 -DZIPGW_UNITTEST -DPROJECT_CONF_H=\"project-conf.h\")
 
 include_directories(
+  ..
   ${CMAKE_SOURCE_DIR}/systools/zgw_eeprom_to_sqlite
   ${CMAKE_SOURCE_DIR}/src/
   ${CMAKE_SOURCE_DIR}/src/serialapi
