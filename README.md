@@ -6,8 +6,41 @@ ZipGateway is covered by one of several different licenses.
 The default license is the [Master Software License Agreement (MSLA)](https://www.silabs.com/about-us/legal/master-software-license-agreement), which applies unless otherwise noted. 
 Refer to [LICENSE](./LICENSE) for more details.
 
+# How to build zipgateway
 
-## How to build documentation on Ubuntu 20.04.5 LTS (Focal Fossa)
+Reference OS is currently debian-9 (EoL), Only 32 bits OS are currently supported.
+
+A helper script allows to setup env and build on device, docker or cloud (eg: github actions).
+
+```bash
+./helper.mk help
+./helper.mk setup/debian
+./helper.mk
+```
+
+If using a different OS you can rely on docker (assuming you have installed it along docker-compose)
+
+```bash
+./helper.mk help
+./helper.mk docker/run
+```
+
+Building on reference device (Raspberry Pi3+ debian-9 EoL) is also possible too:
+
+Dump image to sdcard from:
+
+- http://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2019-04-09/2019-04-08-raspbian-stretch-lite.zip
+
+```bash
+./helper.mk help
+./helper.mk setup/raspbian
+./helper.mk
+```
+It should take less than 20 min to build and run tests,
+debugging on board using gdb can be helpful too.
+
+
+# How to build documentation on Ubuntu 20.04.5 LTS (Focal Fossa)
 ----------------------------
 ```bash
 $ sudo apt-get install -y doxygen graphviz mscgen roffit perl git python3 cmake\
