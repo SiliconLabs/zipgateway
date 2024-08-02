@@ -1,1 +1,5 @@
-add_executable(test_tokquote tokquote.c test_tokquote.c ${CMAKE_SOURCE_DIR}/libzwaveip/libzw_log.c)
+add_executable(test_tokquote tokquote.c test_tokquote.c ../../../libzwaveip/libzw_log.c)
+target_include_directories(test_tokquote
+  PUBLIC
+  ../../../include
+)
