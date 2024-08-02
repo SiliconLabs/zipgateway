@@ -49,8 +49,6 @@ endif()
 
 find_package(LibXml2)
 
-include_directories(include/ ${OPENSSL_INCLUDE_DIR} ${LIBXML_INCLUDE_DIR} xml/ libedit/)
-
 message (STATUS "openssl libraries: ${OPENSSL_LIBRARIES}")
 
 # Figure out a proper versioning for the build
@@ -59,57 +57,40 @@ if(NOT GIT_FOUND)
 endif()
 
 execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --match "ver*"
-    OUTPUT_VARIABLE VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+  OUTPUT_VARIABLE VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-if (VERSION MATCHES "^ver")
-    #MESSAGE( STATUS "found git tag")
-    #parse the version information into pieces.
-    string(REGEX REPLACE "^ver([0-9]+)_.*" "\\1" VERSION_MAJOR "${VERSION}")
-    string(REGEX REPLACE "^ver[0-9]+_([0-9]+).*" "\\1" VERSION_MINOR "${VERSION}")
-    string(REGEX REPLACE "^ver[0-9]+_[0-9]+.[0-9]+[0-9,R,C,_]*-.[0-9]*-(.*)" "\\1" VERSION_SHA1 "${VERSION}")
-    string(REGEX REPLACE "^ver[0-9]+_[0-9]+.([0-9]+).*" "\\1" PATCH_LEVEL "${VERSION}")
-    string(REGEX REPLACE "^ver[0-9]+_[0-9]+.[0-9]+([0-9,R,C,_]*).*" "\\1" VERSION_TWEAK "${VERSION}")
-    if (${VERSION_TWEAK} MATCHES ${VERSION})
-      unset(VERSION_TWEAK)
-    endif()
-    if (${VERSION_SHA1} MATCHES ${VERSION})
-      unset(VERSION_SHA1)
-    endif()
-    set(VERSION_SHORT "${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}")
-    if (DEFINED VERSION_SHA1)
-      set(VERSION_SHORT "${VERSION_SHORT}-${VERSION_SHA1}")
-    endif()
-    message(STATUS "VERSION_MAJOR: " ${VERSION_MAJOR})
-    message(STATUS "VERSION_MINOR: " ${VERSION_MINOR})
-    message(STATUS "PATCH_LEVEL: " ${PATCH_LEVEL})
-    message(STATUS "VERSION_TWEAK: " ${VERSION_TWEAK})
-    message(STATUS "VERSION_SHA1: " ${VERSION_SHA1})
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pkgconfig.h.cmake.in ${CMAKE_CURRENT_SOURCE_DIR}/pkgconfig.h)
+if(VERSION MATCHES "^ver")
+  MESSAGE(STATUS "log: found git tag: ${VERSION}")
 else()
-    set(VERSION_SHA1 ${VERSION})
-    set(VERSION_SHORT "${VERSION}")
+  if(NOT DEFINED VERSION)
+    set(VERSION ver0_0.0)
+  endif()
 endif()
 
-if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "armv7l")
-  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
-  set(CPACK_FILE_NAME_EXTRA "stretch")
-else()
-  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
+#parse the version information into pieces.
+string(REGEX REPLACE "^ver([0-9]+)_.*" "\\1" VERSION_MAJOR "${VERSION}")
+string(REGEX REPLACE "^ver[0-9]+_([0-9]+).*" "\\1" VERSION_MINOR "${VERSION}")
+string(REGEX REPLACE "^ver[0-9]+_[0-9]+.[0-9]+[0-9,R,C,_]*-.[0-9]*-(.*)" "\\1" VERSION_SHA1 "${VERSION}")
+string(REGEX REPLACE "^ver[0-9]+_[0-9]+.([0-9]+).*" "\\1" PATCH_LEVEL "${VERSION}")
+string(REGEX REPLACE "^ver[0-9]+_[0-9]+.[0-9]+([0-9,R,C,_]*).*" "\\1" VERSION_TWEAK "${VERSION}")
+if (${VERSION_TWEAK} MATCHES ${VERSION})
+  unset(VERSION_TWEAK)
 endif()
-set(CPACK_PACKAGE_VERSION_MAJOR ${VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${PATCH_LEVEL})
-set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_SHORT}-Source")
-
+if (${VERSION_SHA1} MATCHES ${VERSION})
+  unset(VERSION_SHA1)
+endif()
+set(VERSION_SHORT "${VERSION_MAJOR}.${VERSION_MINOR}.${PATCH_LEVEL}")
+if (DEFINED VERSION_SHA1)
+  set(VERSION_SHORT "${VERSION_SHORT}-${VERSION_SHA1}")
+endif()
+message(STATUS "VERSION_MAJOR: " ${VERSION_MAJOR})
+message(STATUS "VERSION_MINOR: " ${VERSION_MINOR})
+message(STATUS "PATCH_LEVEL: " ${PATCH_LEVEL})
+message(STATUS "VERSION_TWEAK: " ${VERSION_TWEAK})
+message(STATUS "VERSION_SHA1: " ${VERSION_SHA1})
 message(STATUS "VERSION_SHORT: " ${VERSION_SHORT})
 
-set(CPACK_SOURCE_GENERATOR "ZIP")
-set(CPACK_SOURCE_IGNORE_FILES
-  "Jenkinsfile"
-  "/build.*/"
-  )
-
-INCLUDE(CPack)
+configure_file(pkgconfig.h.cmake.in ${CMAKE_CURRENT_SOURCE_DIR}/pkgconfig.h)
 
 add_subdirectory( libzwaveip )
 add_subdirectory( xml )
@@ -118,16 +99,44 @@ add_subdirectory( examples )
 add_subdirectory( test )
 add_subdirectory( doc )
 
-set(BINARY_ZIP_FILENAME libzwaveip-${VERSION_SHORT}-${CMAKE_SYSTEM_NAME})
-if (CPACK_FILE_NAME_EXTRA)
-  set(BINARY_ZIP_FILENAME ${BINARY_ZIP_FILENAME}-${CPACK_FILE_NAME_EXTRA})
-endif()
-set(BINARY_ZIP_FILENAME ${BINARY_ZIP_FILENAME}-${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}-Binaries)
-add_custom_target(binary_zip
+if(CPack_CMake_INCLUDED EQUAL 1)
+  install(FILES "config/ZWave_custom_cmd_classes.xml"
+    DESTINATION "share/zwave/"
+  )
+else()
+  message("warning: Legacy package for standalone building, to be deprecated")
+  set(CPACK_SOURCE_GENERATOR "ZIP")
+  set(CPACK_SOURCE_IGNORE_FILES
+    "Jenkinsfile"
+    "/build.*/"
+  )
+
+  set(CPACK_ARCHIVE_COMPONENT_INSTALL ON)
+  set (CPACK_DEB_COMPONENT_INSTALL ON)
+  INCLUDE(CPack)
+
+  if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "armv7l")
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
+    set(CPACK_FILE_NAME_EXTRA "stretch")
+  else()
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${CMAKE_SYSTEM_PROCESSOR})
+  endif()
+  set(CPACK_PACKAGE_VERSION_MAJOR ${VERSION_MAJOR})
+  set(CPACK_PACKAGE_VERSION_MINOR ${VERSION_MINOR})
+  set(CPACK_PACKAGE_VERSION_PATCH ${PATCH_LEVEL})
+  set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${VERSION_SHORT}-Source")
+
+  set(BINARY_ZIP_FILENAME libzwaveip-${VERSION_SHORT}-${CMAKE_SYSTEM_NAME})
+  if (CPACK_FILE_NAME_EXTRA)
+    set(BINARY_ZIP_FILENAME ${BINARY_ZIP_FILENAME}-${CPACK_FILE_NAME_EXTRA})
+  endif()
+  set(BINARY_ZIP_FILENAME ${BINARY_ZIP_FILENAME}-${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}-Binaries)
+  add_custom_target(binary_zip
                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                   COMMAND mkdir -p ${BINARY_ZIP_FILENAME} &&
                           cp reference_client reference_listener
                           ZWave_custom_cmd_classes.xml ${BINARY_ZIP_FILENAME}/ &&
                           zip -r ${BINARY_ZIP_FILENAME}.zip
                           ${BINARY_ZIP_FILENAME}/)
-add_dependencies(binary_zip reference_client reference_listener)
+  add_dependencies(binary_zip reference_client reference_listener)
+endif()
