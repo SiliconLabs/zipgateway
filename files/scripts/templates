@@ -37,6 +37,12 @@ Type: select
 Choices: ${choices}
 Description: Wired network interface where the ZIP Client will be connected to
 
+Template: zipgateway/bridge_stp
+Type: select
+Default: Enabled
+Choices: Enabled, Disabled
+Description: Spanning Tree Protocol to bridge to allow multiple bridges
+
 Template: zipgateway/restart_nw
 Type: select 
 Choices: Yes, I will reboot later

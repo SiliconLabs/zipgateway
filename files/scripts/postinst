@@ -153,11 +153,19 @@ net.ipv6.conf.tap0.disable_ipv6=1
 
     cat > /etc/network/interfaces.d/br-lan <<!EOF
 auto br-lan
-iface br-lan inet dhcp 
-  bridge_stp on
+iface br-lan inet dhcp
   bridge_ports $ETH_PORT
   bridge_fd 2
 !EOF
+
+    db_get zipgateway/bridge_stp
+    ENABLE_STP="$RET"
+    [ "Disabled" = "$ENABLE_STP" ] || cat >> /etc/network/interfaces.d/br-lan <<!EOF
+  bridge_stp on
+  # Note bridge_stp option can be removed if causing networking issue in your LAN
+  # https://wiki.linuxfoundation.org/networking/bridge_stp
+!EOF
+
     cat > /etc/logrotate.d/zipgateway <<!EOF
 "/var/log/zipgateway.log" {
 	rotate 0
