@@ -16,7 +16,7 @@ RUN echo "# log: Setup system"  \
   && apt-get install -y sudo make \
   && date -u
 
-ENV project zw-zgw
+ENV project zipgateway
 ENV workdir /usr/local/src/${project}
 WORKDIR ${workdir}
 COPY helper.mk ${workdir}
