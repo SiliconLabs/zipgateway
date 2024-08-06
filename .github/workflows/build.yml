@@ -1,17 +1,38 @@
+# YAML -*- mode: yaml; tab-width: 2; indent-tabs-mode: nil; coding: utf-8 -*-
+---
 name: Docker Image CI
 
 on:
   push:
+    branches:
+    tags:
   pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4.1.1
-      with:
-        fetch-depth: 0
-    - name: Setup qemu to support foreign arch
-      run: sudo apt-get update && sudo apt-get install -y binfmt-support qemu-system-arm qemu-user-static
-    - name: Build Docker image from sources
-      run: docker build .
+      - uses: actions/checkout@v4.1.1
+        with:
+          fetch-depth: 0
+      - name: Setup qemu to support foreign arch
+        run: >
+          sudo apt-get update
+          && sudo apt-get install -y
+          binfmt-support
+          qemu-system-arm
+          qemu-user-static
+      - name: Build Docker image from sources
+        run: docker build --tag "zipgateway:latest" .
+      - name: Release packages
+        if: ${{ github.event_name == 'push' }} && contains( ${{ github.ref }}, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.ZIPGATEWAY_GH_TOKEN }}
+        run: >
+          container=$(docker create "zipgateway:latest")
+          && docker cp ${container}:/usr/local/src/zipgateway/build/ .
+          && gh release create
+          ${{ github.ref_name }}
+          ./build/*.deb
+          ./build/src/doc/zipgateway-*-docs.zip
+          -R ${{ github.repository }}
