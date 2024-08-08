@@ -195,6 +195,11 @@ iface br-lan inet dhcp
 
 fi
 
+value=0
+db_input zipgateway/association_limit || true
+[ "Disabled" = "$RET" ] || value=1
+echo ZipAssociationLimit=$value >> $GW_CONFFILE
+
 db_get zipgateway/restart_nw
 if [ "$RET" = "Yes" ]
 then

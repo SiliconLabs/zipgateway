@@ -13,6 +13,7 @@ db_input critical zipgateway/zip_lan_ip6 || true
 db_input critical zipgateway/zip_pan_ip6 || true
 db_input critical zipgateway/enable_wlan || true 
 db_input critical zipgateway/bridge_stp || true
+db_input critical zipgateway/association_limit || true
 db_endblock
 if ! db_go ; then
     exit 10
