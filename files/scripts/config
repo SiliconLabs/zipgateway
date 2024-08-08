@@ -8,6 +8,7 @@ db_capb backup
 
 db_beginblock
 db_input critical zipgateway/serial_port || true
+db_input critical zipgateway/region || true
 db_input critical zipgateway/zip_lan_ip6 || true
 db_input critical zipgateway/zip_pan_ip6 || true
 db_input critical zipgateway/enable_wlan || true 
