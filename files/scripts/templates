@@ -49,6 +49,12 @@ Default: Enabled
 Choices: Enabled, Disabled
 Description: Spanning Tree Protocol to bridge to allow multiple bridges
 
+Template: zipgateway/association_limit
+Type: select
+Default: Disabled
+Choices: Enabled, Disabled
+Description: Limit to a single classical temporal association (experimental)
+
 Template: zipgateway/restart_nw
 Type: select 
 Choices: Yes, I will reboot later
