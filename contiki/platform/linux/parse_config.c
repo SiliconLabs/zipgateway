@@ -423,12 +423,12 @@ void ConfigInit()
     }
 
     cfg.single_classic_temp_association = atoi(
-      config_get_val("single_classic_temp_association", "0"));
+      config_get_val("ZipAssociationLimit", "0"));
 
     if ((0 != cfg.single_classic_temp_association) &&
       (1 != cfg.single_classic_temp_association)) {
       WRN_PRINTF("Wrong configuration value for "
-                 "\"single_classic_temp_association\" (%d). Ignoring",
+                 "\"ZipAssociationLimit\" (%d). Ignoring",
                  cfg.single_classic_temp_association);
 
       cfg.single_classic_temp_association = 0;
