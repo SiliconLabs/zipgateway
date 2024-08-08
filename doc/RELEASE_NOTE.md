@@ -1,6 +1,4 @@
-# Z/IP Gateway SDK 7.18.03
-
-June 1, 2023
+# Z/IP Gateway SDK 7.18.04
 
 The Z/IP Gateway emulates the behavior of IP-enabled Z-Wave devices so that IP
 applications may interact with Z-Wave devices via normal IP routing principles. The Z/IP
@@ -8,15 +6,19 @@ Gateway decodes Z/IP Packet headers and forwards extracted Z-Wave commands to
 the node identified by the given IPv6 or IPv4 address.
 
 These release notes cover Z/IP Gateway SDK version(s):
-7.18.03
+7.18.04
 
-This file is a derivate of document
+For the record this file was a derivate of document
 [SRN14932-1C.pdf](https://www.silabs.com/documents/public/release-notes/SRN14932-1C.pdf)
-which can be downloaded using [simplicity studio](https://www.silabs.com/developers/simplicity-studio).
+which was downloaded using [simplicity studio](https://www.silabs.com/developers/simplicity-studio).
 
 ## NEW FEATURES
 
-Security hardening
+- Project relocated to github:
+  - https://github.com/SiliconLabs/zipgateway
+- libzipgateway agregated into main package
+- Security hardening
+- More configuration
 
 ## Compatibility and Use Notices
 
@@ -63,121 +65,43 @@ many sections. Essentially, the key words “MUST”, “MUST NOT”, “REQUIRE
 
 ## 1 Improvements
 
-- Security hardening (Security Advisory A-00000457)
-- Documentation to support docker for compilation
-- Testing
+- Security hardening
+- [ZGW-3413: Improve keys randomization](https://github.com/SiliconLabs/zipgateway/pull/12)
+- More customization: Region, Association Limit (Virtualnodes)
+- Native building on device, docker or cloud
 
 ## 2 Fixed Issues
 
-Fixed in release 7.18.03
+Fixed in release 7.18.04
 
-- ZWG: Fix Network management state machine for new add node mode
-- SWPROT-7936: Filesystem conversion tool for migration steps for 700 series to 800 series
-- SWPROT-8064: Fix missing nodes when exporting to filesystem
-- ZSP-505: Generate random from host instead of NCP to improve reliability
-- ZGW-3383: Only enable Skip FL nodes In Neighbor Discovery when supported (ADD_NODE_OPTION_SFLND on 7.19.0+) 
-- ZGW: Send AssignSUCReturn route with Assign return route to SUC
-- ZGW-3389: Update List of supported devices classes from Z-Wave alliance (supported.csv)
-- ZGW: Extra check in version handling to prevent segmentation faults with invalid inputs
-- ZGW: Security fixes (drop invalid packets, input checks to avoid memory overrun exploits)
-- ZGW-3399: Network management handles missing setdefault callback for NM_EV_TIMEOUT
-- ZGW-3398: Avoid to create unneeded virtual nodes after enabling ZWLR by disabling soft reset after setting node id base type
+- [ZGW-3403: Support single temporal associations](https://github.com/SiliconLabs/zipgateway/pull/5)
+- [ZGW-3393: Check node id base type when wrong source node id is received](https://github.com/SiliconLabs/zipgateway/pull/20)
 
 ## 3 Known Issues in the Current Release
 
 Issues in bold were added since the previous release.
 
-- ZGW-1035: Z/IP Gateway will queue and delay incoming DTLS Client
-  Hello requests while attempting to deliver a frame to a FliRS
-  device. Delay may be multiple seconds if the FliRS device is
-  not working.
-- ZGW-633: In some situations, NACK Waiting is sent late. This occurs if
-  the internal queues are locked or are long. The queues are
-  locked when exercising the mailbox or performing network
-  management operations. A Z/IP client might time out on a
-  frame delivery even though the frame is in fact going to be
-  delivered. ACK/NACK will be received on delivery.
-  - Workaround: 
-    Extend timers in the client or if possible be aware that
-    the queues are locked due to network management
-    operations.
-- ZGW-2707: The Z/IP Gateway does not reply multichannel encapsulated
-  S2 secure command supported Get command.
-  - Workaround: Z/IP Client should not advertise multichannel as a
-    supported command class.
-- ZGW-2948: LibZWaveIP transmits data over Ipv4 while connecting over Ipv6
-- ZGW-3025: Network keys are sent over UART in plaintext (see 5.3.1)
-  Workaround: 
-  Secure GW product against physical tampering
-- ZGW-3006: Dynamic TX Power is not forwarded via IMA. Z/IP Clients are
-  not informed of the dynamic TX power used to send a
-  particular frame.
-- ZGW-3104: The Z/IP Gateway cannot supports network sizes exceeding
-  750 nodes. The Long Range specification allows even larger
-  networks.
-- ZGW-3153: Migration to Long Range (LR) Z/IP Gateway from a LR
-  gateway not based on Z/IP Gatway does not work. The
-  migrated LR Z/IP Gateway will not be operational.
-- ZGW-3287: Z/IP Gateway backup restore functionality does not work for
-  800 series chip
-- ZGW-3393: Zipgateway logs report invalid node IDs above 4000 for ZWLR
-- ZGW-3396: ZIP Gateway does not regain SUC/SIS state after Learn Mode time out
-- ZGW-3390: Joining ZGW through S0 fails learn mode process
-  Workaround: Use s2
+- [Debian 9 repository is no more supported (EoL) so we use archive](https://github.com/SiliconLabs/zipgateway/pull/3)
 
 ## 4 Removed and Deprecated Items
 
 ### 4.1 Firmware Update targets
 
-All firmware targets except target 0 are deprecated in Firmware Update Command Class.
-Target 0 (i.e. the Z-Wave chip Flash memory) has furthermore been marked not-upgradable
-because the upgrade path via the backup/restore functionality should be used instead.
-The other firmware targets have been deprecated 
-because it is unsafe to update them individually.
-It is recommended to use the backup/restore functionality of the ZGW instead.
-It will safely update the information previously exposed through the firmware targets.
+No changes since previous release, please refer to history of this file.
 
 ### 4.2 Back-off during polling
 
-The Z/IP Gateway no longer performs back off when Z/IP clients are polling Z-Wave devices.
-This must be handled by the clients. The change improves scalability of large networks.
-As mandated by SDS11846: Z-Wave Plus Role Type Specification section 3.7, 
-a ZWave controller must rate-limit polling of devices in the network.
-Previously, the Z/IP Gateway would automatically apply rate limiting to
-requests from Z/IP clients.
-This functionality has now been removed 
-in order to improve large network scalability.
-As a consequence, Z/IP clients must now adhere to the requirements 
-in SDS11846: Z-Wave Plus Role Type Specification.
+No changes since previous release, please refer to history of this file.
 
 ## 5 Using This Release
 
 The Z/IP Gateway Software Developers Kit contains the following components:
 
 - Debian packages:
-  - Z/IP Gateway 7.18.03, for Raspberry Pi 3B+
-  - Z/IP Gateway 7.18.03, for Linux i386
+  - Z/IP Gateway for Raspberry Pi 3B+
 
 - Source code:
-  - Z/IP Gateway 7.18.03
-
-- libzwaveip 7.18.03
-
-- Documentation:
-  - INS12503, Z/IP Gateway Porting Process
-  - SDS12938, Z/IP LAN Security
-  - SDS12089, Z/IP Gateway Bootstrapping
-  - SDS11756, Z/IP DNS Discovery support (DNS-SD, mDNS)
-  - SDS11633, Z/IP Resource Directory (RD, DNS-SD, mDNS)
-  - SDS11445, IP Architecture Framework for Z-Wave (Z/IP)
-  - SDS13944, Node Provisioning Information Type Registry (QR code, Z/IP Gateway, SmartStart)
-  - Z/IP Security 2 in Z/IP Gateway
-  - Z/IP Gateway Source Code Documentation
-  - Z/IP Gateway User Guide (Z-Wave & IP Basics, Compilation, Installation, Troubleshooting, Sample Code)
-  - libzwaveip documentation in the file libzwaveip-7.18.01.release-docs.zip
-    Additionally, the following documentation can be found in:
-    https://www.silabs.com/products/wireless/mesh-networking/z-wave/specification:
-  - Z-Wave Command Class specifications
+  - Z/IP Gateway and libzwaveip
 
 ### 5.1 Key Features of Z/IP Gateway SDK
 
