@@ -52,6 +52,10 @@ set(CONTIKI_SRC
 )
 add_library(contiki-core ${CONTIKI_CORE_SRC} )
 
+include_directories(
+  ${CMAKE_CURRENT_BINARY_DIR}/..
+)
+  
 target_include_directories(contiki-core PUBLIC
   ${CONTIKI_INC}
   ..
