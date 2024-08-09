@@ -1,7 +1,4 @@
-
-
-
-
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/..)
 
 set(TS2 "${LIBS2}/transport_service")
 set(TS2_SRC ${TS2}/transport_service2.c ${TS2}/transport2_fsm.c)
