@@ -4,6 +4,12 @@ Default: /dev/ttyACM0
 Description: The serial port where z-wave controller is connected.
  (default: /dev/ttyACM0)
 
+Template: zipgateway/region
+Type: select
+Choices: EU, US, ANZ, HK, ID, IL, RU, CN, US_LR, JP, KR
+Default: EU
+Description: Region to be used (it should match controller firmware)
+
 Template: zipgateway/zip_lan_ip6
 Type: string
 Default: fd00:aaaa::3
@@ -42,6 +48,12 @@ Type: select
 Default: Enabled
 Choices: Enabled, Disabled
 Description: Spanning Tree Protocol to bridge to allow multiple bridges
+
+Template: zipgateway/association_limit
+Type: select
+Default: Disabled
+Choices: Enabled, Disabled
+Description: Limit to a single classical temporal association (experimental)
 
 Template: zipgateway/restart_nw
 Type: select 

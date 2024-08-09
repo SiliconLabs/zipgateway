@@ -17,6 +17,22 @@ fi
 sed -i "/ZipSerialAPIPortName*/d" $GW_CONFFILE 
 echo ZipSerialAPIPortName=$PORT >> $GW_CONFFILE
 
+value="0x00" # Values should be aligned to RF_Region_Set_Validator.h
+db_get zipgateway/region
+[ "EU" != "$RET" ] || value="0x00"
+[ "US" != "$RET" ] || value="0x01"
+[ "ANZ" != "$RET" ] || value="0x02"
+[ "HK" != "$RET" ] || value="0x03"
+[ "ID" != "$RET" ] || value="0x05"
+[ "IL" != "$RET" ] || value="0x06"
+[ "RU" != "$RET" ] || value="0x07"
+[ "CN" != "$RET" ] || value="0x08"
+[ "US_LR" != "$RET" ] || value="0x09"
+[ "JP" != "$RET" ] || value="0x20"
+[ "KR" != "$RET" ] || value="0x21"
+sed -i "/ZWRFRegion*/d" $GW_CONFFILE
+echo ZWRFRegion=$value >> $GW_CONFFILE
+
 db_get zipgateway/zip_lan_ip6
 LAN="$RET"
 if [ "$RET" = "" ]; then
@@ -178,6 +194,11 @@ iface br-lan inet dhcp
 !EOF
 
 fi
+
+value=0
+db_input zipgateway/association_limit || true
+[ "Disabled" = "$RET" ] || value=1
+echo ZipAssociationLimit=$value >> $GW_CONFFILE
 
 db_get zipgateway/restart_nw
 if [ "$RET" = "Yes" ]

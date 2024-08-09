@@ -39,7 +39,9 @@ cross_system_dir("include" "" CROSS_SYSTEM_INCLUDE)
 # Setting -DOPTIONAL_SYSTEM_INCLUDE=<optional_include_path> allows to specify
 # addional include path(s) when building libs2.
 include_directories(include ${ZWAVE_INCLUDE_DIR} ${CROSS_SYSTEM_INCLUDE}
-                    ${OPTIONAL_SYSTEM_INCLUDE})
+  ${OPTIONAL_SYSTEM_INCLUDE}
+  ${CMAKE_CURRENT_BINARY_DIR}/..
+)
 
 if("${CMAKE_PROJECT_NAME}" STREQUAL "SDK")
   set(SKIP_TESTING true)

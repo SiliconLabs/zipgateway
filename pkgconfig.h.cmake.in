@@ -1,0 +1,37 @@
+
+
+/* Enable non DTLS connections */
+#cmakedefine DEBUG_ALLOW_NONSECURE
+
+#cmakedefine NO_ZW_NVM
+
+/* directory for local state (default /var) */
+#define  INSTALL_LOCALSTATEDIR "${CMAKE_INSTALL_PREFIX}/var"
+
+/* directory for config files (default /etc) */
+#define INSTALL_SYSCONFDIR "${CMAKE_INSTALL_PREFIX}/etc"
+
+/* Define to the full name of this package. */
+#define PACKAGE_NAME "${CMAKE_PROJECT_NAME}"
+
+/* Define to the full name and version of this package. */
+#define PACKAGE_STRING "${CMAKE_PROJECT_NAME} ${VERSION}"
+
+/* git SHA1 */
+#define PACKAGE_SVN_REVISION "${VERSION_SHA1}"
+
+/* Define to the one symbol short name of this package. */
+#define PACKAGE_TARNAME "${CMAKE_PROJECT_NAME}"
+
+
+/* Define to the version of this package. */
+#define PACKAGE_VERSION "${VERSION}"
+
+/* major version */
+#define PACKAGE_VERSION_MAJOR ${VERSION_MAJOR}
+
+/* minor version */
+#define PACKAGE_VERSION_MINOR ${VERSION_MINOR}
+
+/* maintenance version */
+#define PACKAGE_PATCH_LEVEL ${PATCH_LEVEL}

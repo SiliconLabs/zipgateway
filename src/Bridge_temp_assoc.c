@@ -390,7 +390,12 @@ temp_assoc_add_to_association_table(temp_association_t *new_a)
 
 static bool check_available_temp_assoc()
 {
-  uint8_t temp_assoc_count = list_length(temp_association_table);
+  uint8_t classic_temp_associations =  MAX_CLASSIC_TEMP_ASSOCIATIONS;
+
+  if (0 != cfg.single_classic_temp_association)
+  {
+    classic_temp_associations = 1;
+  }
 
   if (is_lr_node(nodeOfIP(&(BACKUP_UIP_IP_BUF->destipaddr))) &&
       (lr_temp_assoc_next_nodeid_idx < MAX_LR_TEMP_ASSOCIATIONS))
@@ -401,7 +406,7 @@ static bool check_available_temp_assoc()
     return true;
   }
   else if (is_classic_node(nodeOfIP(&(BACKUP_UIP_IP_BUF->destipaddr))) &&
-             (temp_assoc_next_nodeid_idx < MAX_CLASSIC_TEMP_ASSOCIATIONS))
+             (temp_assoc_next_nodeid_idx < classic_temp_associations))
   {
     DBG_PRINTF("%d classic temp associations are currently allocated (leaving %d unallocated)\n",
                temp_assoc_next_nodeid_idx + 1,
