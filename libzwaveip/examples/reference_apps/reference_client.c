@@ -1244,7 +1244,7 @@ void print_usage(char *argv0)
   }
   UI_MSG("\n     If the -n option is also used the key will not be used.\n\n");
   UI_MSG("  -n Use a non-secure UDP connection to the gateway. Default is a DTLS connection.\n\n");
-  UI_MSG("  -g Provide the logging file path (i.e., absoulte name path, e.g., /home/parallels/Desktop/test_log.log)\n");
+  UI_MSG("  -g Provide the logging file path (i.e., absoulte name path, e.g., ~/test_log.log)\n");
   UI_MSG("  -u Specify logging severity level that causes messages to be displayed yo UI.\n");
   UI_MSG("     The logging severities are: 0...7 0 = all, 1 = trace(low level OpenSSL tracing), 2 = trace, 3 = debug\n");
   UI_MSG("     4 = info, 5 = warning, 6 = error, 7 fatal\n");
@@ -1258,7 +1258,7 @@ void print_usage(char *argv0)
   UI_MSG("Examples:\n");
   UI_MSG("  reference_client -s fd00:aaaa::3\n");
   UI_MSG("  reference_client -s 10.168.23.10 -p 123456789012345678901234567890AA\n");
-  UI_MSG("  reference_client -s 10.211.55.18 -p 123456789012345678901234567890AA -g /home/parallels/Desktop/test_log.log -f 2 -u 4\n");
+  UI_MSG("  reference_client -s 10.211.55.18 -p 123456789012345678901234567890AA -g ~/test_log.log -f 2 -u 4\n");
 }
 
 void parse_server_ip(struct app_config *cfg, char *optarg)
