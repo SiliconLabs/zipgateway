@@ -92,7 +92,7 @@ static void print_usage(char *argv0) {
          "     received messages. Default is to search for the following two files:\n");
   UI_MSG("      - %s\n", DEFAULT_ZWAVE_CMD_CLASS_XML);
   UI_MSG("      - %s\n\n", find_xml_file(argv0));
-  UI_MSG("  -g Provide the logging file path (i.e., absoulte name path, e.g., /home/parallels/Desktop/listerner_log.log)\n");
+  UI_MSG("  -g Provide the logging file path (i.e., absoulte name path, e.g., ~/listerner_log.log)\n");
   UI_MSG("  -u Specify logging severity level that causes messages to be displayed yo UI.\n");
   UI_MSG("     The logging severities are: 0...7 0 = all, 1 = trace(low level OpenSSL tracing), 2 = trace, 3 = debug\n");
   UI_MSG("     4 = info, 5 = warning, 6 = error, 7 fatal\n");
