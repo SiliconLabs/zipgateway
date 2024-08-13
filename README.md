@@ -1,22 +1,21 @@
-# Z/IP Gateway SDK
+# Z/IP Gateway
+
+The Z/IP gateway is a free reference design intended for development and demonstration purposes only. It is provided as is, with no warranties. Customers are advised to conduct security and compliance testing of all gateways during the product design process.
+
+> [!WARNING] 
+> The Z/IP Gateway solution is in maintenance mode. To access a maintained Z-Wave gateway solution supporting the latest protocol features, refer to the [Unify SDK](https://github.com/SiliconLabs/UnifySDK) project.
 
 ## LICENSING
 
-Z/IP Gateway is covered by one of several different licenses.
-The default license is the [Master Software License Agreement (MSLA)](https://www.silabs.com/about-us/legal/master-software-license-agreement), which applies unless otherwise noted.
-Refer to [LICENSE](./LICENSE) for more details.
-
+Z/IP Gateway is covered the [Master Software License Agreement (MSLA)](https://www.silabs.com/about-us/legal/master-software-license-agreement), which applies unless otherwise noted. Refer to [LICENSE](./LICENSE) for more details.
 
 ## HOW TO USE Z/IP GATEWAY
 
-Reference setup, is RaspberryPi on raspbian-9 OS (EoL)
+Z/IP Gateway reference setup is a Raspberry Pi running raspbian-9 OS (EoL).
 
-Dump image to SDcard from:
-
-- http://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2019-04-09/2019-04-08-raspbian-stretch-lite.zip
-
-Prepare system with required dependencies:
-
+To get started with Z/IP gateway:
+- Retrieve the image from the link below and flash it to an SD card : http://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2019-04-09/2019-04-08-raspbian-stretch-lite.zip
+- Prepare your system with the required dependencies:
 ```sh
 sudo sed -e 's|raspbian.raspberrypi.org|legacy.raspbian.org|g' \
             -i /etc/apt/sources.list \
@@ -26,27 +25,18 @@ sudo apt-get update
 sudo apt-get install -y etckeeper # Will track changes in /etc
 ```
 
-Setup a Z-Wave NCP controller,
-firmware (eg: zwave_ncp_serial_api_controller-brd4206a-eu.hex)
-should be flashed using tools from:
-[simplicity studio](https://www.silabs.com/developers/simplicity-studio).
-
-The alternative option is to download firmware
+- Set up a Z-Wave NCP controller. Refer to [Z-Wave online documentation](https://docs.silabs.com/z-wave/7.22.1/zwave-getting-started-overview/). An alternative option is to download an NCP controller firmware
 ["zwave_ncp_serial_api_controller-${board}-${region}.hex"](https://github.com/SiliconLabs/gecko_sdk/releases#demo_application.zip)
 and deploy it using
-[SimplicityCommander-Linux](https://www.silabs.com/documents/public/software/SimplicityCommander-Linux.zip)
-
-Then connected to USB port, it should be detected, you can check using:
+[Simplicity Commander](https://www.silabs.com/documents/public/software/SimplicityCommander-Linux.zip).
+- Connect the controller to a USB port. Check the proper detection using:
 
 ```sh
 ls /dev/serial/by-id/usb-Silicon_Labs_*
 ```
 
-Download zipgateway deb package from release page:
-
-- [https://github.com/SiliconLabs/zipgateway/releases](https://github.com/SiliconLabs/zipgateway/releases)
-
-Copy it to target device and install it along its dependencies and configure daemon accordingly.
+- Download the Z/IP Gateway deb package from the release page: [https://github.com/SiliconLabs/zipgateway/releases](https://github.com/SiliconLabs/zipgateway/releases)
+- Copy it to the target device and install it along its dependencies. Finally, configure the daemon accordingly.
 
 ```sh
 sudo dpkg -i zipgateway-*-Linux-armhf.deb || sudo apt install -f # To install missing deps
@@ -55,8 +45,7 @@ sudo dpkg -L zipgateway # List server and client and other utilities
 cat /usr/local/etc/zipgateway.cfg # To check configuration file
 ```
 
-Use zipgateway using example libzwaveip's reference_client
-(now part of the package previously installed)
+- Use Z/IP Gateway with libzwaveip's reference client (part of the package).
 
 ```sh
 # Check if daemon is running
@@ -89,10 +78,8 @@ cmd:  DEFAULT_SET_COMPLETE
 ```
 
 
-Next step it to interact with an other device,
-end node should be prepared with application firmware
-(eg: zwave_soc_switch_on_off-brd4202a-eu.hex),
-and then included to Z-Wave network.
+To interact with another device, flash an end device with a Z-Wave application
+(eg: zwave_soc_switch_on_off-brd4202a-eu.hex), and then included it to your Z-Wave network.
 
 
 ```
@@ -128,18 +115,15 @@ bytestream: 25 03 00 00 00
 
 ```
 
-## HOW TO BUILD Z/IP/GATEWAY
+## HOW TO BUILD Z/IP GATEWAY
 
-As said above, only 32 bits OS are currently supported.
+Only 32-bit platforms are currently supported.
 
-Reference OS is currently debian-9 (EoL), native building is supported (using cmake),
-and you can rely on helper script to setup system and pass tests to generate a debian package
-ready to be installed (see above) (This script can be also run from docker or github)
-
+The reference OS is currently debian-9 (EoL). Native build is supported using cmake. You can rely on helper scripts to set up a system and pass tests to generate a debian package ready to be installed.
 
 ### NATIVE BUILD ON TARGET DEVICE
 
-It should take less than 20 min to build and run tests.
+To build Z/IP Gateway, execute the following command.
 
 ```sh
 sudo apt install make
@@ -148,7 +132,7 @@ sudo apt install make
 ./helper.mk
 ```
 
-For the record, dependencies are listed in helper.mk,
+For the record, dependencies are listed in helper.mk and the
 compilation relies on cmake using standard directives:
 
 ```sh
@@ -157,20 +141,17 @@ cmake ..
 cmake --build .
 ```
 
-Feel free to tweak env,
-debugging on board using gdb can be helpful too.
-
+Feel free to tweak env, debugging using gdb can be helpful too.
 
 ### BUILD ON HOST
 
-To speed up the build, native build can be deported to host using
-different containerization techniques (docker, systemd. chroot, qemu, binfmt),
-check [DevTools](./DevTools/) directory for more.
-
+To speed up the build process, native build can be deported to the host using
+different containerization techniques (docker, systemd, chroot, qemu, binfmt).
+Check the [DevTools](./DevTools/) directory for more information.
 
 ## MORE
 
-Extra documentation is available in doc folder or online:
+Additional documentation is available in doc folder or online:
 
 - https://github.com/SiliconLabs/zipgateway/
 - https://www.silabs.com/wireless/z-wave/specification
