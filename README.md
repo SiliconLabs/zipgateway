@@ -8,7 +8,6 @@ The Z/IP gateway is a free reference design intended for development and demonst
 ## LICENSING
 
 Z/IP Gateway is covered the [Master Software License Agreement (MSLA)](https://www.silabs.com/about-us/legal/master-software-license-agreement), which applies unless otherwise noted. Refer to [LICENSE](./LICENSE) for more details.
-
 ## HOW TO USE Z/IP GATEWAY
 
 Z/IP Gateway reference setup is a Raspberry Pi running raspbian-9 OS (EoL).
