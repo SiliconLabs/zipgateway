@@ -1,6 +1,12 @@
 /**
  * \mainpage Z/IP Gateway Documentation
  *
+ * DISCLAIMER
+ * \n
+ * The Z/IP Gateway solution is in maintenance mode.
+ * To access a maintained Z-Wave gateway solution supporting the latest protocol features,
+ * refer to the [Unify SDK](https://github.com/SiliconLabs/UnifySDK) project.
+ * \n\n
  * The Z/IP Gateway documentation consists of four pages. \n
  * \n
  *
