@@ -92,6 +92,7 @@ set(CONTIKI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/contiki)
 set(ZGW_SRC_DIR ${CMAKE_SOURCE_DIR}/src)
 
 # Include lib S2
+include_directories( ${CMAKE_CURRENT_BINARY_DIR} )
 set(LIBS2 "${CMAKE_CURRENT_SOURCE_DIR}/libs2" )
 
 set(S2_LIBRARIES s2_controller s2crypto aes)
