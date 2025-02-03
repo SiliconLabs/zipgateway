@@ -50,7 +50,7 @@ cat /usr/local/etc/zipgateway.cfg # To check configuration file
 ```sh
 # Check if daemon is running
 $ systemctl status zipgateway # should report service active
-$ tail -F /usr/log/zipgateway.log # To see traces
+$ tail -F /var/log/zipgateway.log # To see traces
 
 # Connect to daemon using client, and use interactive shell:
 $ reference_client # Will report usage
