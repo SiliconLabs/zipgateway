@@ -88,14 +88,10 @@ setup/debian/stretch: /etc/apt/sources.list /etc/os-release
 
 setup/debian/buster: /etc/apt/sources.list /etc/os-release
 	grep 'VERSION="10 (buster)"' /etc/os-release
-#	${sudo} sed -e 's|\(http://\)\(.*\)\(.debian.org\)|\1archive\3|g' -i $<
-#	${sudo} sed -e 's|stretch-updates|stretch-proposed-updates|g' -i $<
-#	echo "deb http://archive.debian.org/debian stretch-backports main contrib non-free" \
-| ${sudo} tee "$<.d/backports.list"
 	${sudo} apt-get update
 	${sudo} apt-get install -y ${packages}
 
-setup/debian: setup/debian/stretch
+setup/debian: setup/debian/buster
 	echo "# $@"
 
 setup: setup/debian
