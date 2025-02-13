@@ -22,14 +22,16 @@ static
 int cc_version_callback(BYTE txStatus, BYTE rxStatus,
     ZW_APPLICATION_TX_BUFFER *pCmd, WORD cmdLength, void* user)
 {
-  if(!pCmd) return 0;
   rd_ep_database_entry_t *ep = (rd_ep_database_entry_t*) user;
-  if (!ep) return 0;
-  rd_node_database_entry_t* n = ep->node;
-  if (!n) return 0;
-  if(txStatus == TRANSMIT_COMPLETE_OK) {
-    if(pCmd->ZW_VersionCommandClassReportFrame.requestedCommandClass == v.requestedCommandClass) {
-      if(pCmd->ZW_VersionCommandClassReportFrame.commandClassVersion >= 0x01) {
+  rd_node_database_entry_t* n = ep ? ep->node : NULL; // get node if ep is not NULL
+  if (!n) {
+    ERR_PRINTF("ep or ep->node is NULL!!");
+    return 0;
+  }
+
+  if (!pCmd && txStatus == TRANSMIT_COMPLETE_OK) {
+    if (pCmd->ZW_VersionCommandClassReportFrame.requestedCommandClass == v.requestedCommandClass) {
+      if (pCmd->ZW_VersionCommandClassReportFrame.commandClassVersion >= 0x01) {
         rd_node_cc_version_set(n, v.requestedCommandClass, pCmd->ZW_VersionCommandClassReportFrame.commandClassVersion);
         n->pcvs->probe_cc_idx++;
         n->pcvs->state = PCV_LAST_REPORT;
@@ -60,12 +62,13 @@ static
 int version_capabilities_callback(BYTE txStatus, BYTE rxStatus,
     ZW_APPLICATION_TX_BUFFER *pCmd, WORD cmdLength, void* user)
 {
-  if(!pCmd) return 0;
   rd_ep_database_entry_t *ep = (rd_ep_database_entry_t*) user;
-  if (!ep) return 0;
-  rd_node_database_entry_t* n = ep->node;;
-  if (!n) return 0;
-  if(txStatus == TRANSMIT_COMPLETE_OK) {
+  rd_node_database_entry_t* n = ep ? ep->node : NULL; // get node if ep is not NULL
+  if (!n) {
+    ERR_PRINTF("ep or ep->node is NULL!!");
+    return 0;
+  }
+  if (!pCmd && txStatus == TRANSMIT_COMPLETE_OK) {
     n->node_version_cap_and_zwave_sw = ((ZW_VERSION_CAPABILITIES_REPORT_V3_FRAME*)pCmd)->properties;
     n->pcvs->state = PCV_SEND_VERSION_ZWS_GET;
     pcv_fsm_post_event(ep, PCV_EV_VERSION_CAP_REPORT_RECV);
@@ -85,10 +88,13 @@ int version_zwave_software_callback(BYTE txStatus, BYTE rxStatus,
     ZW_APPLICATION_TX_BUFFER *pCmd, WORD cmdLength, void* user)
 {
   rd_ep_database_entry_t *ep = (rd_ep_database_entry_t*) user;
-  if (!ep) return 0;
-  rd_node_database_entry_t *n = ep->node;
-  if (!n) return 0;
-  if(txStatus == TRANSMIT_COMPLETE_OK) {
+  rd_node_database_entry_t *n = ep ? ep->node : NULL; // get node if ep is not NULL
+  if (!n) {
+    ERR_PRINTF("ep or ep->node is NULL!!");
+    return 0;
+  }
+
+  if (txStatus == TRANSMIT_COMPLETE_OK) {
     /* TODO Do we have the need to save ZWS report? */
     //memcpy(n->node_version_cap_and_zwave_sw, &(pCmd->ZW_VersionCapabilitiesReportV3Frame.sdkVersion1), sizeof(ZW_VersionCapabilitiesReportV3Frame) - 2);
     n->node_is_zws_probed = 1;
@@ -104,10 +110,13 @@ int version_zwave_software_callback(BYTE txStatus, BYTE rxStatus,
 
 void rd_ep_probe_cc_version(rd_ep_database_entry_t *ep, _pcvs_callback callback)
 {
-  if(!ep) return;
-  rd_node_database_entry_t *n = ep->node;
-  if (!n) return;
-  if(n->nodeid == MyNodeID) {
+  rd_node_database_entry_t *n = ep ? ep->node : NULL;
+  if (!n) {
+    ERR_PRINTF("ep or ep->node is NULL!!");
+    return;
+  }
+
+  if (n->nodeid == MyNodeID) {
     /* We don't probe ourself for version */
     callback(ep, 0);
   } else {
@@ -124,10 +133,12 @@ void rd_ep_probe_cc_version(rd_ep_database_entry_t *ep, _pcvs_callback callback)
 
 void pcv_fsm_post_event(rd_ep_database_entry_t *ep, pcv_event_t ev)
 {
-  if(!ep) return;
   /* Check all the controlled CC and see if we've probed. If not, try to re-probe. */
-  rd_node_database_entry_t *n = ep->node;
-  if (!n) return;
+  rd_node_database_entry_t *n = ep ? ep->node : NULL;
+  if (!n) {
+    ERR_PRINTF("ep or ep->node is NULL!!");
+    return;
+  }
   ts_param_t p;
   ProbeCCVersionState_t *pcvs = n->pcvs;
 
