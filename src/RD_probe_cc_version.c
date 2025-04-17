@@ -29,7 +29,7 @@ int cc_version_callback(BYTE txStatus, BYTE rxStatus,
     return 0;
   }
 
-  if (!pCmd && txStatus == TRANSMIT_COMPLETE_OK) {
+  if (pCmd && txStatus == TRANSMIT_COMPLETE_OK) {
     if (pCmd->ZW_VersionCommandClassReportFrame.requestedCommandClass == v.requestedCommandClass) {
       if (pCmd->ZW_VersionCommandClassReportFrame.commandClassVersion >= 0x01) {
         rd_node_cc_version_set(n, v.requestedCommandClass, pCmd->ZW_VersionCommandClassReportFrame.commandClassVersion);
@@ -68,7 +68,7 @@ int version_capabilities_callback(BYTE txStatus, BYTE rxStatus,
     ERR_PRINTF("ep or ep->node is NULL!!");
     return 0;
   }
-  if (!pCmd && txStatus == TRANSMIT_COMPLETE_OK) {
+  if (pCmd && txStatus == TRANSMIT_COMPLETE_OK) {
     n->node_version_cap_and_zwave_sw = ((ZW_VERSION_CAPABILITIES_REPORT_V3_FRAME*)pCmd)->properties;
     n->pcvs->state = PCV_SEND_VERSION_ZWS_GET;
     pcv_fsm_post_event(ep, PCV_EV_VERSION_CAP_REPORT_RECV);
