@@ -61,6 +61,7 @@
 #include "ZW_classcmd_ex.h"
 #include <ZW_classcmd.h>
 #include "ResourceDirectory.h"
+#include "list.h"
 
 #define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
 #define UIP_UDP_BUF  ((struct uip_udp_hdr *)&uip_buf[uip_l2_l3_hdr_len])
@@ -69,6 +70,7 @@
 //#define PRINTF printf
 static struct uip_udp_conn *server_conn;
 //static struct uip_udp_conn *server_send_conn;
+static struct uip_udp_conn *cmd_conn;
 
 static struct ctimer zw_udp_timer;
 struct uip_packetqueue_handle async_queue;
@@ -97,6 +99,14 @@ struct ipv4_packet_buffer {
   uint8_t data[1];
 };
 
+/**
+ * UDP receive sessions backup 
+ */
+struct udp_rx_bk_t {
+  list_t next;
+  struct uip_udp_conn *c;
+};
+
 
 /**
  * UDP transmit session
@@ -122,6 +132,8 @@ struct udp_tx_session {
 MEMB(udp_tx_sessions_memb,struct udp_tx_session,4);
 LIST(udp_tx_sessions_list);
 
+MEMB(udp_rx_conn_memb,struct udp_rx_bk_t,4);
+LIST(udp_rx_conn_list);
 
 int zwave_connection_compare(zwave_connection_t* a, zwave_connection_t* b) {
   return
@@ -303,6 +315,8 @@ void udp_send_wrap(struct uip_udp_conn* c, const void* buf, u16_t len, void (*cb
   uip_ds6_route_t *r;
   uip_ds6_nbr_t* nbr;
 
+  DBG_PRINTF("udp_send_wrap() \n");
+
   /*Check if the source node has an IPv4 address before sending*/
   if (uip_is_4to6_addr(&c->ripaddr)) {
     uip_ipv4addr_t addr;
@@ -357,6 +371,7 @@ void udp_send_wrap(struct uip_udp_conn* c, const void* buf, u16_t len, void (*cb
       if (cbFunc) {
         cbFunc(0, user);
       }
+      DBG_PRINTF("udp_send_wrap() Is L2 address in portal\n");
       return uip_udp_packet_send(c, buf, len);
     }
   }
@@ -373,6 +388,7 @@ void udp_send_wrap(struct uip_udp_conn* c, const void* buf, u16_t len, void (*cb
   if (nodeOfIP(&c->ripaddr))
   {
     uip_udp_packet_send(c, buf, len);
+    DBG_PRINTF("udp_send_wrap() nodeOfIP\n");
     return;
   }
 
@@ -382,8 +398,10 @@ void udp_send_wrap(struct uip_udp_conn* c, const void* buf, u16_t len, void (*cb
   /* Since this is neither portal nor PAN traffic, is must be LAN
    * traffic. Most LAN traffic is dtls encrypted */
   if( c->lport == UIP_HTONS(DTLS_PORT) ) {
+    DBG_PRINTF("udp_send_wrap() DTLS_PORT\n");
     dtls_send(c, buf,len,1, cbFunc, user);
   } else {
+    DBG_PRINTF("udp_send_wrap() uip_udp\n");
     uip_udp_packet_send(c, buf,len);
   }
 #endif
@@ -396,6 +414,7 @@ void __ZW_SendDataZIP(
     u16_t datalen,
     ZW_SendDataAppl_Callback_t cbFunc) {
   zwave_connection_t c;
+  DBG_PRINTF("__ZW_SendDataZIP() \n");
 
   memset(&c,0,sizeof(c));
   uip_ipaddr_copy(&c.ripaddr,dst);
@@ -430,6 +449,77 @@ void __ZW_SendDataZIP_ack(
 #endif
 
     ZW_SendDataZIP_ack(&c,dataptr,datalen,cbFunc);
+}
+
+bool ZW_IPMatch(uip_ipaddr_t const s, uip_ipaddr_t const d)
+{
+  if((s.u8[0] == d.u8[0]) 
+    && (s.u8[1] == d.u8[1])
+    && (s.u8[2] == d.u8[2]) 
+    && (s.u8[3] == d.u8[3])) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+void ZW_BackupRxConnInit(void)
+{
+  LOG_PRINTF("ZW_BackupRxConnInit!\n");
+  memb_init(&udp_rx_conn_memb);
+  list_init(udp_rx_conn_list);
+}
+
+void ZW_RemoveRxConnection(struct uip_udp_conn* new_conn)
+{
+  struct udp_rx_bk_t *bc;  
+  for(bc = list_head(udp_rx_conn_list); bc; bc= list_item_next(bc)) {
+    struct uip_udp_conn *conn = bc->c;
+    if (ZW_IPMatch(conn->ripaddr, new_conn->ripaddr)
+        && (conn->rport == new_conn->rport)) {
+        LOG_PRINTF("NEW CONNECTION IS REMOVED!\n");
+        list_remove(udp_rx_conn_list, bc);
+        memb_free(&udp_rx_conn_memb, bc);
+        return;
+      }
+  }  
+}
+
+void ZW_BackupRxConnection(struct uip_udp_conn* new_conn)
+{
+  struct udp_rx_bk_t *bc;
+  for(bc = list_head(udp_rx_conn_list); bc; bc= list_item_next(bc)) {
+    struct uip_udp_conn *conn = bc->c;
+    if (ZW_IPMatch(conn->ripaddr, new_conn->ripaddr)
+        && (conn->rport == new_conn->rport)) {
+        LOG_PRINTF("CONNECTION IS STORED!\n");
+        return;
+      }
+  }
+
+  struct udp_rx_bk_t *cbk = (struct udp_rx_bk_t*)memb_alloc(&udp_rx_conn_memb);
+  if (cbk == NULL) {
+    LOG_PRINTF("ZW_BackupRxConnection no memb!\n");
+    return;
+  }
+  cbk->c = new_conn;
+  list_add(udp_rx_conn_list, cbk);
+  LOG_PRINTF("STORE NEW CONNECTION! items: %u\n", list_length(udp_rx_conn_list));
+}
+
+void ZW_SendResetReportZIP(uint8_t status)
+{
+  const u8_t reset_rpt_frm[] = {COMMAND_CLASS_ZIP, COMMAND_ZIP_SOFT_RESET_REPORT, status};          
+  struct udp_rx_bk_t *cbk;
+
+  LOG_PRINTF("ZW_SendResetReportZIP! items: %u\n", list_length(udp_rx_conn_list));
+  for(cbk = list_head(udp_rx_conn_list); cbk; cbk= list_item_next(cbk)) {
+    struct uip_udp_conn *conn = cbk->c;
+    LOG_PRINTF("ZW send soft reset to port %u of IP:", conn->rport);
+    uip_debug_ipaddr_print(&conn->ripaddr);
+    if (conn) {
+      udp_send_wrap(conn, &reset_rpt_frm, sizeof(reset_rpt_frm), NULL, NULL);
+    }
+  }
 }
 
 
@@ -501,6 +591,7 @@ void
 ZW_SendDataZIP_ack(zwave_connection_t *c,const void *dataptr, u8_t datalen, void
     (*cbFunc)(u8_t, void*, TX_STATUS_TYPE *))
 {
+  DBG_PRINTF("ZW_SendDataZIP_ack() \n");
   if (ZW_IsZWAddr(&c->ripaddr))
   {
     ts_param_t p;
@@ -564,6 +655,7 @@ ZW_SendDataZIP_ack(zwave_connection_t *c,const void *dataptr, u8_t datalen, void
 static void
 ZipND_CommandHandler(struct uip_udp_conn* c,const u8_t* data, u16_t len)
 {
+  LOG_PRINTF("ZipND_CommandHandler len %d \n", len);
   ZW_ZIP_NODE_ADVERTISEMENT_V4_FRAME* zna =
       (ZW_ZIP_NODE_ADVERTISEMENT_V4_FRAME*) data;
   ZW_ZIP_INV_NODE_SOLICITATION_V4_FRAME* zina =
@@ -760,6 +852,7 @@ send_udp_ack(zwave_udp_session_t* s, zwave_udp_response_t res)
 void
 UDPCommandHandler(struct uip_udp_conn* c,const u8_t* data, u16_t len,u8_t received_secure) CC_REENTRANT_ARG
 {
+  LOG_PRINTF("=====> UDPCommandHandler len %d | received_secure %d\n", len, received_secure);
   const u8_t keep_alive_ack[] = {COMMAND_CLASS_ZIP,COMMAND_ZIP_KEEP_ALIVE,ZIP_KEEP_ALIVE_ACK_RESPONSE};
 
   u16_t udp_payload_len;
@@ -772,6 +865,14 @@ UDPCommandHandler(struct uip_udp_conn* c,const u8_t* data, u16_t len,u8_t receiv
   security_scheme_t scheme = AUTO_SCHEME;
 
   int tmp_flags1;
+
+  // backup command connection
+  // cmd_conn = c;
+  ZW_BackupRxConnection(c);
+
+  DBG_PRINTF("Backup cmd_conn port:%d, IP:", UIP_HTONS(c->rport));
+        uip_debug_ipaddr_print(&c->ripaddr);
+
 
   if (pZipPacket->cmdClass == COMMAND_CLASS_ZIP_ND)
   {
@@ -991,7 +1092,7 @@ tcpip_handler(void)
 {
   if (uip_newdata())
   {
-    PRINTF("Incomming UDP\n");
+    LOG_PRINTF("Incomming UDP\n");
 
     /* TODO: When, if ever, should we set rport back to something else? */
 
@@ -1050,6 +1151,9 @@ PROCESS_THREAD(udp_server_process, ev, data)
 
     memb_init(&udp_tx_sessions_memb);
     list_init(udp_tx_sessions_list);
+
+    // init connection list.
+    ZW_BackupRxConnInit();
 
     //print_local_addresses();
 

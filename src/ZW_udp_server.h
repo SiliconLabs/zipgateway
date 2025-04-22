@@ -225,6 +225,16 @@ udp_server_check_ipv4_queue();
 
 
 /**
+ * zip send a soft reset report to zware.
+ */
+void ZW_SendResetReportZIP(uint8_t status);
+
+/**
+ * zip init a backup connection storage.
+ */
+void ZW_BackupRxConnInit(void);
+
+/**
  * This process handles all Z/ZIP UDP communication.
  */
 PROCESS_NAME(udp_server_process);

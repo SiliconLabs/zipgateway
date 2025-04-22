@@ -24,6 +24,7 @@
 #include "CommandAnalyzer.h"
 #include "ZW_classcmd_ex.h"
 #include "ZW_ZIPApplication.h"
+#include "zip_router_config.h"
 /*
  * SendData Hierarchy, each, level wraps the previous. A higher level call MUST only call lower level calls.
  *
@@ -49,12 +50,16 @@ typedef struct
 static uint8_t lock = 0;
 static struct etimer emergency_timer;
 static struct etimer backoff_timer;
+static struct etimer resend_lockup_timer;
+static struct etimer soft_reset_timer;
+static struct etimer check_communication_serial_timer;
 static nodeid_t backoff_node; //Node on which the backoff timer is started
 
 LIST(session_list);
 MEMB(session_memb, send_data_appl_session_t, 8);
 
 static uint8_t lock_ll = 0;
+static uint8_t resend_counter = 0;
 LIST(send_data_list);
 
 
@@ -120,12 +125,13 @@ static send_data_appl_session_t* current_session_ll;
 void
 ZW_SendDataAppl_CallbackEx(uint8_t status, void*user, TX_STATUS_TYPE *ts) REENTRANT
 {
+  LOG_PRINTF("ZW_SendDataAppl_CallbackEx \n");
   send_data_appl_session_t* s = (send_data_appl_session_t*) user;
   uint32_t backoff_interval = 0;
 
   if (!lock)
   {
-    ERR_PRINTF("Double callback! ");
+    ERR_PRINTF("Double callback!\n");
     return;
   }
   lock = FALSE;
@@ -150,9 +156,9 @@ ZW_SendDataAppl_CallbackEx(uint8_t status, void*user, TX_STATUS_TYPE *ts) REENTR
   zw_frame_buffer_free(s->fb);
   memb_free(&session_memb, s);
 
-  /*if(status==TRANSMIT_COMPLETE_FAIL) {
-   DBG_PRINTF("Actual transmitter fault!");
-   }*/
+  if(status==TRANSMIT_COMPLETE_FAIL) {
+    DBG_PRINTF("Actual transmitter fault!\n");
+  }
 
   if (s->callback)
   {
@@ -273,45 +279,77 @@ do_discard_timeout_memb(void * data)
 static void
 send_data_callback_func(u8_t status, TX_STATUS_TYPE* ts)
 {
+  LOG_PRINTF("send_data_callback_func() | status %d\n", status);
   enum en_queue_state queue_state = get_queue_state();
 
   if(!lock_ll) {
     ERR_PRINTF("Double callback?\n");
     return;
   }
+
   
-  send_data_appl_session_t *s = list_pop(send_data_list);
-
-  /* Call only if short queue (queue_state = 1) and status is TRANSMIT_COMPLETE_OK */
-  /* Call all the time queue state is long queue (2)*/
-  /* Do not call if queue state is idle(0) */
-  if (((queue_state == QS_SENDING_FIRST) && (status == TRANSMIT_COMPLETE_OK)) || (queue_state == QS_SENDING_LONG))
+  // if (status == TRANSMIT_COMPLETE_NO_ACK)
+  if (status == TRANSMIT_COMPLETE_FAIL)
   {
-      ima_send_data_done(s->fb->param.dnode,status,ts);
-  }
-  etimer_stop(&emergency_timer);
+    etimer_stop(&emergency_timer);
 
-#if NO_BRIDGE
-  clasic_session_keepalive(s->param.dnode);
-#endif
-
-  //}
-  zw_frame_buffer_free(s->fb);
-  memb_free(&session_memb, s);
-  lock_ll = FALSE;
-  if (s)
-  {
-    if (s->callback)
-    {
-      s->callback(status, s->user, ts);
+    if(resend_counter == 0) {
+      send_data_appl_session_t *s = list_head(send_data_list);
+      if (s)
+      {
+        if (s->callback)
+        {
+          s->callback(status, s->user, ts);
+        }
+      }
+      else
+      {
+        ASSERT(0);
+      }
     }
+    
+    lock_ll = FALSE;
   }
-  else
+  else 
   {
-    ASSERT(0);
-  }
+    send_data_appl_session_t *s = list_pop(send_data_list);
 
-  process_post(&ZW_SendDataAppl_process, SEND_EVENT_SEND_NEXT_LL, NULL);
+    /* Call only if short queue (queue_state = 1) and status is TRANSMIT_COMPLETE_OK */
+    /* Call all the time queue state is long queue (2)*/
+    /* Do not call if queue state is idle(0) */
+    if (((queue_state == QS_SENDING_FIRST) && (status == TRANSMIT_COMPLETE_OK)) || (queue_state == QS_SENDING_LONG))
+    {
+        ima_send_data_done(s->fb->param.dnode,status,ts);
+    }
+
+    LOG_PRINTF("=======> SEND OK \n");
+    etimer_stop(&emergency_timer);
+    etimer_stop(&resend_lockup_timer);
+    etimer_stop(&soft_reset_timer);
+    resend_counter = 0;
+
+  #if NO_BRIDGE
+    clasic_session_keepalive(s->param.dnode);
+  #endif
+
+    zw_frame_buffer_free(s->fb);
+    memb_free(&session_memb, s);
+    if (s)
+    {
+      LOG_PRINTF("send_data_callback_func() | s \n");
+      if (s->callback)
+      {
+        s->callback(status, s->user, ts);
+      }
+    }
+    else
+    {
+      LOG_PRINTF("send_data_callback_func() | ASSERT(0) \n");
+      ASSERT(0);
+    }
+    lock_ll = FALSE;
+    process_post(&ZW_SendDataAppl_process, SEND_EVENT_SEND_NEXT_LL, NULL);
+  }
 }
 
 /**
@@ -333,12 +371,13 @@ u8_t
 send_data(ts_param_t* p, const u8_t* data, u16_t len,
     ZW_SendDataAppl_Callback_t cb, void* user)
 {
+  LOG_PRINTF("send_data() | len %d\n", len);
   send_data_appl_session_t* s;
 
   s = memb_alloc(&session_memb);
   if (s == 0)
   {
-    DBG_PRINTF("OMG! No more queue space");
+    DBG_PRINTF("error: memory: queue is full\n");
     return FALSE;
   }
 
@@ -410,7 +449,7 @@ send_endpoint(ts_param_t* p, const u8_t* data, u16_t len, ZW_SendDataAppl_Callba
 
   /*Select the right security shceme*/
   scheme = ZW_SendData_scheme_select(p, data, len);
-  LOG_PRINTF("Sending with scheme %s\n", network_scheme_name(scheme));
+  LOG_PRINTF("send_endpoint() | Sending with scheme %s\n", network_scheme_name(scheme));
   switch (scheme)
   {
   case USE_CRC16:
@@ -472,7 +511,7 @@ static void
 send_first()
 {
   current_session = list_pop(session_list);
-
+  LOG_PRINTF("send_first() | current_session %p\n", current_session);
   if (!current_session)
   {
     return;
@@ -495,10 +534,12 @@ ZW_SendDataAppl(ts_param_t* p, const void *pData, uint16_t dataLength,
   uint8_t *c = (uint8_t *)pData; //for debug message
   const uint8_t lr_nop[] = {COMMAND_CLASS_NO_OPERATION_LR, 0};
 
- s = memb_alloc(&session_memb);
+  LOG_PRINTF("ZW_SendDataAppl() | dataLength %d\n", dataLength);
+
+  s = memb_alloc(&session_memb);
   if (s == 0)
   {
-    DBG_PRINTF("OMG! No more queue space");
+    DBG_PRINTF("error: memory: queue is full\n");
     return 0;
   }
   /* ZGW-3373: SPAN is reset for the node where Firmware activation set frame is
@@ -662,9 +703,12 @@ void ZW_SendDataAppl_FrameRX_Notify(const ts_param_t *c, const uint8_t* frame, u
 }
 
 
+
 PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
 {
   BYTE rc;
+  int type;
+  unsigned char buf[14];
   PROCESS_BEGIN()
   ;
 
@@ -673,38 +717,67 @@ PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
     switch (ev)
     {
       case PROCESS_EVENT_TIMER:
-        if (data == (void*) &emergency_timer)
+        if(data == (void*) &emergency_timer)
         {
-          //ERR_PRINTF("Missed serialAPI callback!");
+          DBG_PRINTF("Missed serialAPI callback!");
           send_data_callback_func(TRANSMIT_COMPLETE_FAIL,0);
-        } else if(data == (void*) &backoff_timer) {
+        } 
+        if(data == (void*) &backoff_timer) {
           DBG_PRINTF("Backoff timer expired\n");
           process_post(&ZW_SendDataAppl_process, SEND_EVENT_SEND_NEXT, NULL);
+        } 
+        if(data == (void*) &resend_lockup_timer) {
+          resend_counter++;
+          DBG_PRINTF("=> Timer resend expired | resend_counter: %d\n", resend_counter);
+          process_post(&ZW_SendDataAppl_process, SEND_EVENT_SEND_NEXT_LL, NULL);
+        }
+
+        if(data == (void*) &soft_reset_timer) {
+          DBG_PRINTF("=> Resetting the Z-Wave chip\n");
+          if (ZW_GECKO_CHIP_TYPE(chip_desc.my_chip_type)) {
+            etimer_stop(&resend_lockup_timer);
+            resend_counter = 0;
+            ZW_SoftReset();
+            etimer_set(&check_communication_serial_timer, CLOCK_SECOND * 10);
+          }
+        }
+
+        if(data == (void*) &check_communication_serial_timer) {
+          if (ZW_Version(buf) != 0) {
+            DBG_PRINTF("Communicated with serial API :-) \n");
+            process_post(&ZW_SendDataAppl_process, SEND_EVENT_SEND_NEXT_LL, NULL);
+            ZW_SendResetReportZIP(STATUS_SOFT_RESET_OK);
+          } else {
+            ERR_PRINTF("Unable to communicate with serial API again.\n");
+            ZW_SendResetReportZIP(STATUS_SOFT_RESET_FAIL);
+          }
         }
         
         break;
       case SEND_EVENT_SEND_NEXT:
         if (!lock && etimer_expired(&backoff_timer) )
         {
+          DBG_PRINTF("SEND_EVENT_SEND_NEXT \n");
           send_first();
         }
         break;
       case SEND_EVENT_SEND_NEXT_DELAYED:
         {
           uint32_t backoff_interval = (uint32_t)(uintptr_t)(data);
-          //DBG_PRINTF("Stating backoff if %i ms\n",backoff_interval);
+          DBG_PRINTF("Stating backoff if %i ms\n",backoff_interval);
           etimer_set(&backoff_timer, backoff_interval);
         }
         break;
 
       case SEND_EVENT_SEND_NEXT_LL:
         current_session_ll = list_head(send_data_list);
+        DBG_PRINTF("SEND_EVENT_SEND_NEXT_LL | current_session_ll: %p | lock_ll %u\n", current_session_ll, lock_ll);
         if (current_session_ll && lock_ll == FALSE)
         {
           if(current_session_ll->fb->param.discard_timeout)
           {
             //Prevent a timer to discard the frame if the session has a discard_timeout defined.
-            DBG_PRINTF("Stopping discard timer of send_data_list element: %p\n", current_session_ll);
+            DBG_PRINTF("SEND_EVENT_SEND_NEXT_LL | Stopping discard timer of send_data_list element: %p\n", current_session_ll);
             ctimer_stop(&current_session_ll->discard_timer);
           }
 
@@ -716,6 +789,7 @@ PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
             if (SupportsCmdClass(current_session_ll->fb->param.dnode,
                 COMMAND_CLASS_TRANSPORT_SERVICE))
             {
+              DBG_PRINTF("SEND_EVENT_SEND_NEXT_LL | SupportsCmdClass | ZW_TransportService_SendData \n");
               //ASSERT(current_session_ll->param.snode == MyNodeID); //TODO make transport service bridge aware
               rc = ZW_TransportService_SendData(&current_session_ll->fb->param,
                   (u8_t*) current_session_ll->fb->frame_data,
@@ -743,6 +817,16 @@ PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
           {
             if (current_session_ll->fb->param.snode != MyNodeID)
             {
+              DBG_PRINTF("SEND_EVENT_SEND_NEXT_LL | ZW_SendData_Bridge \n");
+              if (etimer_expired(&resend_lockup_timer) && (cfg.time_resend_serial != 0)) {
+                DBG_PRINTF("etimer_set resend_lockup_timer with time: %d \n", cfg.time_resend_serial);
+                etimer_set(&resend_lockup_timer, 1000UL * cfg.time_resend_serial);
+              }
+
+              if (etimer_expired(&soft_reset_timer)) {
+                etimer_set(&soft_reset_timer, 1000UL * 120);
+              }
+
               rc = ZW_SendData_Bridge(current_session_ll->fb->param.snode,
                                       current_session_ll->fb->param.dnode,
                                       (BYTE*) current_session_ll->fb->frame_data,
@@ -752,6 +836,7 @@ PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
             }
             else
             {
+              DBG_PRINTF("SEND_EVENT_SEND_NEXT_LL | else \n");
               current_session_ll->fb->param.snode = 0x00ff;
               rc = ZW_SendData(current_session_ll->fb->param.dnode,
                                (BYTE*) current_session_ll->fb->frame_data,

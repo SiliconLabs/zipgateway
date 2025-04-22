@@ -317,6 +317,11 @@ struct router_config {
    * This is an experimental feature.
    */
   uint8_t single_classic_temp_association;
+  
+  /** Configuration parameter time resend data to Serial in zipgateway.cfg
+   *
+   */
+  uint8_t time_resend_serial; 
 };
 
 /**

@@ -381,7 +381,7 @@ ApplicationCommandHandlerZIP(ts_param_t *p, ZW_APPLICATION_TX_BUFFER *pCmd,
   if (cmdLength == 0)
     return;
 
-  LOG_PRINTF("ApplicationCommandHandler %d->%d [%s] \n",
+  LOG_PRINTF("ApplicationCommandHandlerZIP %d->%d [%s] \n",
       (int )p->snode,(int)p->dnode, print_frame((const char *)pCmd, cmdLength));
 
 
@@ -634,17 +634,18 @@ ApplicationCommandHandlerSerial(BYTE rxStatus, nodeid_t destNode, nodeid_t sourc
 static u8_t
 zwave_send(uip_lladdr_t *addr)
 {
+  LOG_PRINTF("zwave_send()\n");
   nodeid_t nodeid = 0;
   /* Is Unicast? */
   if (addr)
   {
-    /*    DBG_PRINTF("  %02x:%02x:%02x:%02x:%02x:%02x length %i",
+     DBG_PRINTF("  %02x:%02x:%02x:%02x:%02x:%02x length %i",
      pan_lladdr.addr[0],
      pan_lladdr.addr[1],
      pan_lladdr.addr[2],
      pan_lladdr.addr[3],
      pan_lladdr.addr[4],
-     pan_lladdr.addr[5],uip_len);*/
+     pan_lladdr.addr[5],uip_len);
 
     if(memcmp(addr->addr, tun_lladdr.addr, 6) == 0)  /* Is L2 address in portal */
     {
@@ -662,7 +663,7 @@ zwave_send(uip_lladdr_t *addr)
     {
       if (landev_send)
       {
-         //DBG_PRINTF("Send to lan\n");
+         DBG_PRINTF("Send to lan\n");
          landev_send(addr);
       }
     }
@@ -675,6 +676,7 @@ zwave_send(uip_lladdr_t *addr)
     if (!(UIP_IP_BUF ->proto == UIP_PROTO_ICMP6
         && UIP_ICMP_BUF ->type == ICMP6_RPL))
     {
+      DBG_PRINTF("Do not send RPL messages to LAN | landev_send: %p\n", landev_send);
       if (landev_send)
       /* Multicast, send to all interfaces */
       landev_send(addr);
@@ -1348,7 +1350,7 @@ PROCESS_THREAD(zip_process, ev, data)
 
     while(1)
     {
-      //DBG_PRINTF("Event ***************** %x ********************\n",ev);
+      DBG_PRINTF("Event ***************** %x ********************\n",ev);
 #ifndef __ASIX_C51__
       if(ev == serial_line_event_message)
       {
@@ -1667,11 +1669,14 @@ PROCESS_THREAD(zip_process, ev, data)
 
         /* Check if we are waiting for backup */
         zip_router_check_backup(data);
-      } else if (ev == ZIP_EVENT_NODE_PROBED)
+      } 
+      else if (ev == ZIP_EVENT_NODE_PROBED)
       {
+        LOG_PRINTF("ZIP_EVENT_NODE_PROBED\n");
          /* Tell NMS that the node probe has completed. */
          NetworkManagement_node_probed(data);
-      } else if (ev == ZIP_EVENT_ALL_IPV4_ASSIGNED
+      } 
+      else if (ev == ZIP_EVENT_ALL_IPV4_ASSIGNED
                  || ev == ZIP_EVENT_NODE_DHCP_TIMEOUT)
       {
         /* FIXME: We trigger the script here. But what if few nodes do not get DHCP lease. THen
@@ -1679,6 +1684,7 @@ PROCESS_THREAD(zip_process, ev, data)
          */
         if (ev == ZIP_EVENT_ALL_IPV4_ASSIGNED)
         {
+          LOG_PRINTF("ZIP_EVENT_ALL_IPV4_ASSIGNED\n");
           char ip[IPV6_STR_LEN] = {0};
           char *execve_args[2] = {0};
           pid_t pid = 0;
@@ -1746,7 +1752,9 @@ PROCESS_THREAD(zip_process, ev, data)
         /* Tell NM to poll for its requirements.  This will set
          * NETWORK_UPDATE_FLAG_VIRTUAL and maybe other flags. */
         NetworkManagement_NetworkUpdateStatusUpdate(0);
-      } else if(ev == ZIP_EVENT_NETWORK_MANAGEMENT_DONE) {
+      } 
+      else if(ev == ZIP_EVENT_NETWORK_MANAGEMENT_DONE) {
+        LOG_PRINTF("ZIP_EVENT_NETWORK_MANAGEMENT_DONE\n");
         /* Always send node list report when GW just starts */
         if (zgw_initing == TRUE) {
           set_should_send_nodelist();
@@ -1764,28 +1772,35 @@ PROCESS_THREAD(zip_process, ev, data)
             * now. */
            zgw_component_done(ZGW_NM, data);
         }
-      } else if(ev == ZIP_EVENT_NM_VIRT_NODE_REMOVE_DONE) {
+      } 
+      else if(ev == ZIP_EVENT_NM_VIRT_NODE_REMOVE_DONE) {
         DBG_PRINTF(" ZIP_EVENT_NM_VIRT_NODE_REMOVE_DONE triggered\n");
         NetworkManagement_VirtualNodes_removed();
-      } else if (ev == ZIP_EVENT_BACKUP_REQUEST) {
+      } 
+      else if (ev == ZIP_EVENT_BACKUP_REQUEST) {
+        LOG_PRINTF("ZIP_EVENT_BACKUP_REQUEST\n");
         if (ZGW_COMPONENT_ACTIVE(ZGW_BU)) {
           WRN_PRINTF("Backup already requested once.\n");
         }
         zgw_component_start(ZGW_BU);
         zip_router_check_backup(data);
-      } else if (ev == ZIP_EVENT_COMPONENT_DONE) {
-         if (ZGW_COMPONENT_ACTIVE(ZGW_BU)) {
-            if (data == (void*)extend_middleware_probe_timeout) {
-               DBG_PRINTF("NetworkManagement done after middleware probe timeout.\n");
-            } else {
-               DBG_PRINTF("Component done with data: %p\n", data);
-            }
-         }
-         zip_router_check_backup(data);
-      } else if (ev == PROCESS_EVENT_TIMER) {
-         if (data == (void*)&zgw_bu_timer) {
-            zip_router_check_backup(data);
-         }
+      } 
+      else if (ev == ZIP_EVENT_COMPONENT_DONE) {
+        LOG_PRINTF("ZIP_EVENT_COMPONENT_DONE\n");
+        if (ZGW_COMPONENT_ACTIVE(ZGW_BU)) {
+          if (data == (void*)extend_middleware_probe_timeout) {
+              DBG_PRINTF("NetworkManagement done after middleware probe timeout.\n");
+          } else {
+              DBG_PRINTF("Component done with data: %p\n", data);
+          }
+        }
+        zip_router_check_backup(data);
+      } 
+      else if (ev == PROCESS_EVENT_TIMER) {
+        LOG_PRINTF("PROCESS_EVENT_TIMER\n");
+        if (data == (void*)&zgw_bu_timer) {
+          zip_router_check_backup(data);
+        }
       }
 
       PROCESS_WAIT_EVENT()

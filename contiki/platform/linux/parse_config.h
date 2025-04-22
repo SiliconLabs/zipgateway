@@ -11,6 +11,10 @@
 
 #define DATA_DIR INSTALL_LOCALSTATEDIR "/lib/" PACKAGE_TARNAME "/"
 
+// Time in seconds to resend the serial API to the controller
+#define MIN_TIME_RESEND_SERIAL 20 
+#define MAX_TIME_RESEND_SERIAL 80 
+#define DEFAULT_TIME_RESEND_SERIAL 50 
 /**
  * Platform dependent routine which fills the \ref router_config structure
  * */
