@@ -3475,6 +3475,12 @@ BOOL ZW_IsPrimaryCtrl (void) {
 BOOL SerialAPI_AES128_Encrypt(const BYTE *ext_input, BYTE *ext_output, const BYTE *cipherKey) CC_REENTRANT_ARG{
   int Nr; /* key-length-dependent number of rounds */
   u32 rk[4*(MAXNR + 1)]; /* key schedule */
+
+  if (ext_input == NULL || ext_output == NULL || cipherKey == NULL) {
+    ASSERT(0); // Invalid input params
+    return 0;
+  }
+
   /*if(SupportsCommand(FUNC_ID_ZW_AES_ECB)) {
     memcpy(&buffer[0],cipherKey,16);
     memcpy(&buffer[16],ext_input,16);
@@ -3483,6 +3489,10 @@ BOOL SerialAPI_AES128_Encrypt(const BYTE *ext_input, BYTE *ext_output, const BYT
     return 1;
   } else*/ {
     Nr = rijndaelKeySetupEnc(rk, cipherKey, 128);
+    if (Nr <= 0) {
+      ASSERT(0); // Key setup failed
+      return 0;
+    }
     rijndaelEncrypt(rk, Nr, ext_input, ext_output);
     return 1;
   }
