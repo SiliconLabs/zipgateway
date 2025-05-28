@@ -1438,12 +1438,12 @@ void send_suc_id(uint8_t status)
     if (status!= TRANSMIT_COMPLETE_OK) {
       ERR_PRINTF("ERROR: ZW_SendSUCID or ZW_AssignSUCReturnRoute to node id: %d failed\n", current_send_suc_id_dest);
     }
-    while (current_send_suc_id_dest <= ZW_MAX_NODES)
+    while (current_send_suc_id_dest < ZW_MAX_NODES)
     {
        current_send_suc_id_dest++;
        if (current_send_suc_id_dest == MyNodeID)
          continue;
-
+         
        nd = rd_node_get_raw(current_send_suc_id_dest);
        if (!nd)
          continue;
