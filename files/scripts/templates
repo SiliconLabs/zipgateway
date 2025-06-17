@@ -59,3 +59,4 @@ Template: zipgateway/restart_nw
 Type: select 
 Choices: Yes, I will reboot later
 Description: Network configuration have changed. Reboot now?
+

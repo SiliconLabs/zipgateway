@@ -40,5 +40,3 @@ then
     sed -i "/noipv6 #Added by zipgateway.*/d" /etc/dhcpcd.conf
     /etc/init.d/dhcpcd restart
 fi
-
-
