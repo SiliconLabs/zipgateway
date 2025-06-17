@@ -1,0 +1,6 @@
+
+* text=auto eol=lf
+
+# Custom attributes for specific files
+postrm text eol=lf
+templates text eol=lf
