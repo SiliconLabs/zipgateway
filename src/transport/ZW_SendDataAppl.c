@@ -52,7 +52,6 @@ static struct etimer emergency_timer;
 static struct etimer backoff_timer;
 static struct etimer resend_lockup_timer;
 static struct etimer soft_reset_timer;
-static struct etimer check_communication_serial_timer;
 static nodeid_t backoff_node; //Node on which the backoff timer is started
 
 LIST(session_list);
@@ -737,22 +736,17 @@ PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
           if (ZW_GECKO_CHIP_TYPE(chip_desc.my_chip_type)) {
             etimer_stop(&resend_lockup_timer);
             resend_counter = 0;
-            ZW_SoftReset();
-            etimer_set(&check_communication_serial_timer, CLOCK_SECOND * 10);
+            // ZW_SoftReset();
+            if (ZW_SoftResetWithCheck()) {
+              DBG_PRINTF("Soft reset successful!\n");
+              process_post(&ZW_SendDataAppl_process, SEND_EVENT_SEND_NEXT_LL, NULL);
+              ZW_SendResetReportZIP(STATUS_SOFT_RESET_OK);
+            } else {
+              ERR_PRINTF("Soft reset failed\n");
+              ZW_SendResetReportZIP(STATUS_SOFT_RESET_FAIL);
+            }
           }
         }
-
-        if(data == (void*) &check_communication_serial_timer) {
-          if (ZW_Version(buf) != 0) {
-            DBG_PRINTF("Communicated with serial API :-) \n");
-            process_post(&ZW_SendDataAppl_process, SEND_EVENT_SEND_NEXT_LL, NULL);
-            ZW_SendResetReportZIP(STATUS_SOFT_RESET_OK);
-          } else {
-            ERR_PRINTF("Unable to communicate with serial API again.\n");
-            ZW_SendResetReportZIP(STATUS_SOFT_RESET_FAIL);
-          }
-        }
-        
         break;
       case SEND_EVENT_SEND_NEXT:
         if (!lock && etimer_expired(&backoff_timer) )
