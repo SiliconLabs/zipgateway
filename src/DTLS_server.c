@@ -415,7 +415,7 @@ dtls_session_timer_adjust()
 
     min = min - clock_seconds();
 
-    //DBG_PRINTF("Next timeout is in %i seconds\n",min);
+    DBG_PRINTF("Next timeout is in %i seconds\n", min);
     if(min<=0) {
       etimer_set(&timer, 50);
     }else {
@@ -547,7 +547,7 @@ PROCESS_THREAD(dtls_server_process, ev, data)
       else if ((ev == tcpip_event && uip_newdata())|| (ev==DTLS_SERVER_INPUT_EVENT) ){
       struct uip_udp_conn *c = get_udp_conn();
 
-      //DBG_PRINTF("DTLS input: ev: %x\n", ev);
+      DBG_PRINTF("DTLS input: ev: %x\n", ev);
       if( ((u8_t*)uip_appdata)[0] == 0x16) { //Only if content type is Handshake
         DBG_PRINTF("DTLS input is handshake:\n");
       }

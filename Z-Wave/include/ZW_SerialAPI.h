@@ -93,6 +93,9 @@ typedef enum
 /* Function ID for startup message */
 #define FUNC_ID_SERIALAPI_STARTED                       0x0A
 #define FUNC_ID_SERIALAPI_SETUP                         0x0B
+// To adapt with the Z-Wave Stack, we use _SERIAL_API_ as defined in 
+// (https://github.com/Z-Wave-Alliance/z-wave-stack/blob/4bf464d6509f7922439e8795f46db83f9adbe893/ZWave/API/ZW_SerialAPI.h#L73)
+#define FUNC_ID_SERIAL_API_STARTED                      0x0A 
 
 #define FUNC_ID_ZW_SET_RF_RECEIVE_MODE                  0x10
 #define FUNC_ID_ZW_SET_SLEEP_MODE                       0x11

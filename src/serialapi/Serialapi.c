@@ -144,6 +144,8 @@ static void set_node_id_in_buffer(uint16_t node_id)
 #define STATUS_FRAMERECEIVED 4
 /** @} */
 
+/* Indices to retrieve field (byte) in the serial-API data frame in the "serbuf" */
+#define IDX_TYPE  1
 #define IDX_CMD   2
 #define IDX_DATA  3
 #define data __data
@@ -3229,6 +3231,59 @@ void ZW_SoftReset()
        LOG_PRINTF("Failed to enable Z-Wave Long Range capability\n");
      }
    }
+}
+
+/**
+  * \ingroup ZWCMD
+  * This is an improvement of ZW_SoftReset() function with check the wakeup reason is soft reset of the NCP controller.
+  * Note: Recent Z-Wave versions (at least 6.80 and 7.00) will return FUNC_ID_SERIAL_API_STARTED once restarted.
+  */
+bool ZW_SoftResetWithCheck(void)
+{
+  int status;
+  int i;
+  bool ret = false;
+
+  // Z-Wave API Soft Reset Command ID (0x08) with no payload as "Z-Wave Host API specification".
+  status = SendFrame(FUNC_ID_SERIAL_API_SOFT_RESET, NULL, 0);
+
+  // Mechanism to check if the NCP controller has been reset sucessfully or not
+  // by waiting for the unsolicited frame "Z-Wave API Started Command - FUNC_ID_SERIAL_API_STARTED (0x0A)".  
+  if (status == conFrameSent) 
+  {
+    for (i = 0; i < MAX_SERIAL_RETRY; i++) {
+      status = WaitResponse();
+      if (status == conFrameReceived) 
+      {
+        // Check if the received frame is the unsolicited frame "Z-Wave API Started Command - FUNC_ID_SERIAL_API_STARTED (0x0A)".
+        // If the NCP controller has been reset successfully, it will return the above unsolicited frame with
+        // byte-5 data as SOFT_RESET_WAKEUP_REASON (0x07).
+        if (serBuf[IDX_TYPE] == REQUEST && 
+          serBuf[IDX_CMD] == FUNC_ID_SERIAL_API_STARTED && 
+          serBuf[IDX_DATA] == SOFT_RESET_WAKEUP_REASON) {
+          
+          SER_PRINTF("Soft Reseting the NCP Controller Successfully!\n");
+          ret = true;
+        } else {
+          // The NCP controller has not been soft-reset successfully if it returns any other frame.
+          SER_PRINTF("Soft Reset failed!\n");
+        }
+        break;
+      }
+      // If the NCP controller does not respond or it may be due to a timeout or other issues ==> Retrying again
+      SER_PRINTF("Unexpected receive state %s after %d tries\n",ConTypeToStr(status), i + 1);
+    }
+  }
+
+  // Inherited code in the past.
+  // Node id base type falls back to default 8 bit on soft reset
+  if (lr_enabled && (ZW_RFRegionGet() == RF_US_LR)) {
+    WRN_PRINTF("SoftReset called while Long Range enabled, Setting the Node id base type to 16 bit again\n");
+    if (SerialAPI_EnableLR() == false) {
+      LOG_PRINTF("Failed to enable Z-Wave Long Range capability\n");
+    }
+  }
+  return ret;
 }
 
 /**

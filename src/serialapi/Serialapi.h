@@ -45,6 +45,8 @@ struct SerialAPI_Callbacks {
 };
 
 #define CHIP_DESCRIPTOR_UNINITIALIZED 0x42
+// The wakeup reason of Z-Wave API Started Command (0x0A) is 0x07 as defined in the Z-Wave Serial API specification.
+#define SOFT_RESET_WAKEUP_REASON 0x07
 
 /**
  * This chip descriptor contains the version of chip (e.g. 500 or 700).
@@ -283,5 +285,18 @@ bool SerialAPI_EnableLR();
  * @return false fail
  */
 bool SerialAPI_DisableLR();
+
+
+/*
+ * @brief This is an improvement of ZW_SoftReset() function with check the reset reason of the NCP controller.
+ * Note: Recent Z-Wave versions (at least 6.80 and 7.00) will return FUNC_ID_SERIAL_API_STARTED once restarted.
+ * Mechanism to check if the NCP controller has been reset successfully or not: 
+ * Check if the received frame is the unsolicited frame "Z-Wave API Started Command - FUNC_ID_SERIAL_API_STARTED (0x0A)".
+ * If the NCP controller has been reset successfully, it will return the above unsolicited frame with
+ * byte-5 data as SOFT_RESET_WAKEUP_REASON (0x07).
+ * @return true success
+ * @return false fail
+ */
+bool ZW_SoftResetWithCheck(void);
 
 #endif /* SERIAL_API_H_ */
