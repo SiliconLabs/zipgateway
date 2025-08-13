@@ -15,6 +15,9 @@
 #include "ZW_controller_api_ex.h"
 #include <unistd.h>
 
+// Reference to PC Controller software: timeout is 1.2 seconds
+#define TIMEOUT_BEFORE_SENDING_NOP 2 /* seconds */
+
 extern ZW_APPLICATION_TX_BUFFER txBuf;
 
 static uint8_t resetNode;
@@ -61,7 +64,7 @@ DeviceResetLocallyHandler(zwave_connection_t *c, uint8_t* frame, uint16_t length
   {
     case DEVICE_RESET_LOCALLY_NOTIFICATION:
       resetNode = nodeOfIP(&c->ripaddr);
-      ctimer_set(&reset_timer, 2, sendNOP, 0);
+      ctimer_set(&reset_timer, TIMEOUT_BEFORE_SENDING_NOP * CLOCK_SECOND, sendNOP, 0);
       break;
   default:
     return COMMAND_NOT_SUPPORTED;;
