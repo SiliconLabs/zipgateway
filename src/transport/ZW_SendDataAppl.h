@@ -224,6 +224,12 @@ security_scheme_t highest_scheme(uint8_t scheme_mask);
 void ZW_SendDataAppl_FrameRX_Notify(const ts_param_t *p, const uint8_t* frame, uint16_t length);
 
 
+/**
+ * Notify the NCP controller status via unsolicited destination(s) (#1 and #2)
+ * @param status  Status code defined in ZW_classcmd_ex.h
+ */
+void notify_ncp_controller_status_via_unsolicited_dest(uint8_t status);
+
 /** @} */
 
 #endif /* ZW_SENDDATAAPPL_H_ */
