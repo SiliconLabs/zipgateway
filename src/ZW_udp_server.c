@@ -508,7 +508,7 @@ void ZW_BackupRxConnection(struct uip_udp_conn* new_conn)
 
 void ZW_SendResetReportZIP(uint8_t status)
 {
-  const u8_t reset_rpt_frm[] = {COMMAND_CLASS_ZIP, COMMAND_ZIP_SOFT_RESET_REPORT, status};          
+  const u8_t reset_rpt_frm[] = {COMMAND_CLASS_ZIP, COMMAND_ZIP_CONTROLLER_STATUS_REPORT, status};          
   struct udp_rx_bk_t *cbk;
 
   LOG_PRINTF("ZW_SendResetReportZIP! items: %u\n", list_length(udp_rx_conn_list));
@@ -519,6 +519,37 @@ void ZW_SendResetReportZIP(uint8_t status)
     if (conn) {
       udp_send_wrap(conn, &reset_rpt_frm, sizeof(reset_rpt_frm), NULL, NULL);
     }
+  }
+}
+
+/**
+ * Send NCP Controller Status Report to the given connection.
+ * We've used the form of Z/IP Command Class (0x23), with a new custom COMMAND_ZIP_CONTROLLER_STATUS_REPORT (0x04).
+ * And the payload is the status bytes:
+ * #define STATUS_SOFT_RESET_OK            0x0
+ * #define STATUS_SOFT_RESET_FAIL          0xFF
+ * Note: Currently, this function is only used to send "NCP Controller's Soft Reset Status" via unsolicited destinations.
+ * The frame format is of our custom Z/IP command as below:
+ * +---+---+---+---+---+---+---+---+
+ * | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 | Bit
+ * +---+---+---+---+---+---+---+---+
+ * | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 1 | COMMAND_CLASS_ZIP (0x23)
+ * +---+---+---+---+---+---+---+---+
+ * | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | COMMAND_ZIP_CONTROLLER_STATUS_REPORT (0x04)
+ * +---+---+---+---+---+---+---+---+
+ * | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | STATUS_SOFT_RESET_OK (0x00) or STATUS_SOFT_RESET_FAIL (0xFF)
+ * +---+---+---+---+---+---+---+---+
+ */
+void ZW_SendNCPControllerStatusZIP(zwave_connection_t *c, uint8_t status)
+{
+  const u8_t controller_status_frame[] = {COMMAND_CLASS_ZIP, COMMAND_ZIP_CONTROLLER_STATUS_REPORT, status};
+
+  if (c) {
+    struct uip_udp_conn conn = c->conn;
+    DBG_PRINTF("ZW_SendNCPControllerStatusZIP => sending ncp cotroller status from local to remote address\n");
+    uip_udp_print_conn(&conn);
+    LOG_PRINTF("Sending Command_Class_ZIP (0x%2.2x), COMMAND_ZIP_CONTROLLER_STATUS_REPORT (0x%2.2x), status (0x%2.2x) to Unsolicited Destinations\n", controller_status_frame[0], controller_status_frame[1], controller_status_frame[2]);
+    udp_send_wrap(&conn, &controller_status_frame, sizeof(controller_status_frame), NULL, NULL);
   }
 }
 

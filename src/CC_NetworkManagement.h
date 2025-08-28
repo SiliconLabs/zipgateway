@@ -674,6 +674,11 @@ void extend_middleware_probe_timeout(void);
  */
 void send_to_both_unsoc_dest(const uint8_t * frame, uint16_t len, ZW_SendDataAppl_Callback_t cbFunc);
 
+/**
+ * Set up the connection to be the unsolicited destinations (#1 or #2)
+ */
+bool setup_unsolicited_connection(zwave_connection_t *conn, uint8_t dest_id);
+
 /* Internal entry function used by the CC_NetworkManagement_queue, this function
  * the same as NetworkManagementCommandHandler but it will not put the command
  * back in the queue.

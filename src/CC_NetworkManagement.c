@@ -375,6 +375,20 @@ static int set_conn_to_unsol2(zwave_connection_t*  c)
  }
 }
 
+/**
+ * Set up the connection to be the unsolicited destinations (#1 or #2)
+ */
+bool setup_unsolicited_connection(zwave_connection_t *conn, uint8_t dest_id)
+{
+  bool ret = false;
+  if(dest_id == 1) {
+    ret = set_conn_to_unsol1(conn);
+  } else if(dest_id == 2) {
+    ret = set_conn_to_unsol2(conn);
+  }
+  return ret;
+}
+
 static uint8_t set_unsolicited_as_nm_dest()
 {
   nms.seq = random_rand() & 0xFF;

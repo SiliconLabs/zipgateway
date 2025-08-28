@@ -1215,8 +1215,11 @@ typedef struct _ZW_EXTENDED_NODE_ADD_STATUS_1BYTE_FRAME_
 #define COMMAND_CLASS_NO_OPERATION_LR   0x04
 
 
-// Soft Reset Status
-#define COMMAND_ZIP_SOFT_RESET_REPORT   0x04
+// NCP Controller Status
+// We defined a new command (COMMAND_ZIP_CONTROLLER_STATUS_REPORT-0x04) in the COMMAND_CLASS_ZIP (0x23)
+#define COMMAND_ZIP_CONTROLLER_STATUS_REPORT   0x04   
+// Currently, we define for the NCP controller's Soft Reset Status only.
+// Later, we can extend it for other controller status reports like NCP Controller Health Check.
 #define STATUS_SOFT_RESET_OK            0x0
 #define STATUS_SOFT_RESET_FAIL          0xFF
 

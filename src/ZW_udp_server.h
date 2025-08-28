@@ -234,6 +234,27 @@ void ZW_SendResetReportZIP(uint8_t status);
  */
 void ZW_BackupRxConnInit(void);
 
+
+/**
+ * Send NCP Controller Status Report to the given connection.
+ * We've used the form of Z/IP Command Class (0x23), with a new custom COMMAND_ZIP_CONTROLLER_STATUS_REPORT (0x04).
+ * And the payload is the status bytes:
+ * #define STATUS_SOFT_RESET_OK            0x0
+ * #define STATUS_SOFT_RESET_FAIL          0xFF
+ * Note: Currently, this function is only used to send "NCP Controller's Soft Reset Status" via unsolicited destinations.
+ * The frame format is of our custom Z/IP command as below:
+ * +---+---+---+---+---+---+---+---+
+ * | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 | Bit
+ * +---+---+---+---+---+---+---+---+
+ * | 0 | 0 | 1 | 0 | 0 | 0 | 1 | 1 | COMMAND_CLASS_ZIP (0x23)
+ * +---+---+---+---+---+---+---+---+
+ * | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | COMMAND_ZIP_CONTROLLER_STATUS_REPORT (0x04)
+ * +---+---+---+---+---+---+---+---+
+ * | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | STATUS_SOFT_RESET_OK (0x00) or STATUS_SOFT_RESET_FAIL (0xFF)
+ * +---+---+---+---+---+---+---+---+
+ */
+void ZW_SendNCPControllerStatusZIP(zwave_connection_t *c, uint8_t status);
+
 /**
  * This process handles all Z/ZIP UDP communication.
  */

@@ -16,7 +16,7 @@
 #include "node_queue.h"
 #include "S2_wrap.h"
 #include "S2_multicast_auto.h"
-#include<stdlib.h>
+#include <stdlib.h>
 #include "ZW_transport_api.h"
 #include "ZIP_Router_logging.h"
 #include "zgw_crc.h"
@@ -25,6 +25,8 @@
 #include "ZW_classcmd_ex.h"
 #include "ZW_ZIPApplication.h"
 #include "zip_router_config.h"
+#include "ZW_classcmd.h"
+#include "CC_NetworkManagement.h"
 /*
  * SendData Hierarchy, each, level wraps the previous. A higher level call MUST only call lower level calls.
  *
@@ -701,7 +703,30 @@ void ZW_SendDataAppl_FrameRX_Notify(const ts_param_t *c, const uint8_t* frame, u
   }
 }
 
+/**
+ * Notify the NCP controller status via unsolicited destination(s) (#1 and #2).
+ * @param status  Status code defined in ZW_classcmd_ex.h
+ */
+void notify_ncp_controller_status_via_unsolicited_dest(uint8_t status)
+{
+  // unsolicited connections
+  zwave_connection_t uconn;
+  memset(&uconn, 0, sizeof(zwave_connection_t));
 
+  DBG_PRINTF("Notify NCP soft reset status(%d) via unsolicited dest\n", status);
+  if (uip_is_addr_unspecified(&cfg.unsolicited_dest)
+      && uip_is_addr_unspecified(&cfg.unsolicited_dest2)) {
+     ERR_PRINTF("No Unsolicited Destinations configured\n");
+      return;
+  }
+
+  // Send the report to both unsolicited destinations (#1 and #2)
+  for (int i = 0; i < 2; i++) {
+    if(setup_unsolicited_connection(&uconn, i+1)) {
+      ZW_SendNCPControllerStatusZIP(&uconn, status);
+    }
+  }
+}
 
 PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
 {
@@ -740,10 +765,12 @@ PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
             if (ZW_SoftResetWithCheck()) {
               DBG_PRINTF("Soft reset successful!\n");
               process_post(&ZW_SendDataAppl_process, SEND_EVENT_SEND_NEXT_LL, NULL);
-              ZW_SendResetReportZIP(STATUS_SOFT_RESET_OK);
+              //ZW_SendResetReportZIP(STATUS_SOFT_RESET_OK);
+              notify_ncp_controller_status_via_unsolicited_dest(STATUS_SOFT_RESET_OK);
             } else {
               ERR_PRINTF("Soft reset failed\n");
-              ZW_SendResetReportZIP(STATUS_SOFT_RESET_FAIL);
+              //ZW_SendResetReportZIP(STATUS_SOFT_RESET_FAIL);
+              notify_ncp_controller_status_via_unsolicited_dest(STATUS_SOFT_RESET_FAIL);
             }
           }
         }
