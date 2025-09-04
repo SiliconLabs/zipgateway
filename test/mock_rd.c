@@ -55,7 +55,7 @@ rd_node_database_entry_t *rd_node_get_raw(nodeid_t nodeid)
 {
   // Fix ZGW-3423: Segmentation fault if SAPI controller NVM cleared  
   // Use assert to catch invalid nodeid
-  assert((nodeid < 1 || nodeid > ZW_MAX_NODES) && "Invalid nodeid out of array range!"); 
+  assert((nodeid >= 1 && nodeid <= ZW_MAX_NODES) && "Invalid nodeid out of range [1:ZW_MAX_NODES]!");
   
   return ndb[nodeid - 1];
 }
