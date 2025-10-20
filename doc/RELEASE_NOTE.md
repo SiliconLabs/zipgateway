@@ -1,4 +1,4 @@
-# Z/IP Gateway SDK 7.18.04
+# Z/IP Gateway SDK 7.18.05
 
 The Z/IP Gateway emulates the behavior of IP-enabled Z-Wave devices so that IP
 applications may interact with Z-Wave devices via normal IP routing principles. The Z/IP
@@ -6,19 +6,13 @@ Gateway decodes Z/IP Packet headers and forwards extracted Z-Wave commands to
 the node identified by the given IPv6 or IPv4 address.
 
 These release notes cover Z/IP Gateway SDK version(s):
-7.18.04
+7.18.05
+
+Changelog: https://github.com/SiliconLabs/zipgateway/compare/ver7_18.04...ver7_18.05
 
 For the record this file was a derivate of document
 [SRN14932-1C.pdf](https://www.silabs.com/documents/public/release-notes/SRN14932-1C.pdf)
 which was downloaded using [simplicity studio](https://www.silabs.com/developers/simplicity-studio).
-
-## NEW FEATURES
-
-- Project relocated to github:
-  - https://github.com/SiliconLabs/zipgateway
-- libzipgateway agregated into main package
-- Security hardening
-- More configuration
 
 ## Compatibility and Use Notices
 
@@ -65,17 +59,17 @@ many sections. Essentially, the key words “MUST”, “MUST NOT”, “REQUIRE
 
 ## 1 Improvements
 
-- Security hardening
-- [ZGW-3413: Improve keys randomization](https://github.com/SiliconLabs/zipgateway/pull/12)
-- More customization: Region, Association Limit (Virtualnodes)
-- Native building on device, docker or cloud
+- [Z/IP Gateway Watchdog](https://github.com/SiliconLabs/zipgateway/pull/35)
+- [NCP Soft-Reset Status Notification from Z/IP GW to Z/IP Clients](https://github.com/SiliconLabs/zipgateway/pull/35)
+- [Implement CC Device_Reset_Locally](https://github.com/SiliconLabs/zipgateway/pull/40)
+- [Security hardening](https://github.com/SiliconLabs/zipgateway/pull/36)
 
 ## 2 Fixed Issues
 
-Fixed in release 7.18.04
+Fixed in release 7.18.05
 
-- [ZGW-3403: Support single temporal associations](https://github.com/SiliconLabs/zipgateway/pull/5)
-- [ZGW-3393: Check node id base type when wrong source node id is received](https://github.com/SiliconLabs/zipgateway/pull/20)
+- [Fix ZGW-3423: Segmentation fault after clearing the NVM of ZWave NCP](https://github.com/SiliconLabs/zipgateway/pull/37)
+- [ZGW-3422: Z/IP got stuck after sending VERSION_COMMAND](https://github.com/SiliconLabs/zipgateway/pull/34)
 
 ## 3 Known Issues in the Current Release
 
@@ -260,6 +254,13 @@ The Z/IP LAN Security framework provides a means of securing the communication p
 Secure Z/IP UDP frames are ordinary Z/IP frames wrapped in a DTLS wrapper.
 DTLS is the datagram version of TLS. Z/IP LAN Security default UDP port number is 41230.
 Z/IP LAN Security currently only supports the Pre-Shared-Key (PSK) Key Exchange Algorithm.
+
+Note that for debugging purposes this feature is optional
+it can be easily disabled by overiding cmake variable:
+
+``sh
+cmake -DDISABLE_DTLS=ON
+``
 
 ##### 5.1.1.6 Z/IP Discovery
 
