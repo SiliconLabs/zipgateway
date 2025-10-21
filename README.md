@@ -4,11 +4,12 @@ The Z/IP gateway is a free reference design intended for development and demonst
 
 ## DISCLAIMER
 
-The Z/IP Gateway solution is in maintenance mode. To access a maintained Z-Wave gateway solution supporting the latest protocol features, refer to the [Unify SDK](https://github.com/SiliconLabs/UnifySDK) project.
+The Z/IP Gateway solution is in maintenance mode. To access a maintained Z-Wave gateway solution supporting the latest protocol features, refer to the [z-wave-pc-controller](https://github.com/SiliconLabsSoftware/z-wave-protocol-controller) project.
 
 ## LICENSING
 
 Z/IP Gateway is covered the [Master Software License Agreement (MSLA)](https://www.silabs.com/about-us/legal/master-software-license-agreement), which applies unless otherwise noted. Refer to [LICENSE](./LICENSE) for more details.
+
 ## HOW TO USE Z/IP GATEWAY
 
 Z/IP Gateway reference setup is a Raspberry Pi running raspbian-9 OS (EoL).
