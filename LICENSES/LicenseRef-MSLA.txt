@@ -1,6 +1,6 @@
 MASTER SOFTWARE LICENSE AGREEMENT
 
-Version 20221107
+Version 20250501
 
 THIS MASTER SOFTWARE LICENSE AGREEMENT (“AGREEMENT”) GOVERNS YOUR USE OF THE
 LICENSED MATERIALS. INSTALLING, COPYING OR OTHERWISE USING THE SOFTWARE,
@@ -44,6 +44,10 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    "Commercial Purpose” means embedding Micrium Software in any
    Application that you sell or license to End Users or plan to do so.
 
+   "Deprecated Software" refers to any software versions or components
+   that have been officially discontinued by Silicon Labs. Such software
+   is no longer supported, maintained, or updated by Silicon Labs.
+
    “Derivative Works” means a work based upon the Source Code version of
    the Software, such as a revision, modification, translation,
    abridgment, condensation, expansion or any other form in which such
@@ -72,6 +76,11 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    “Firmware” means executable or binary code that is embedded in the
    Silicon Labs Device in ROM or flash memory and cannot be modified by
    Licensee.
+
+   “Feedback” means Licensee-provided suggestions, comments,
+   contributions, modifications, changes, or other feedback to Silicon
+   Labs regarding the Software, Documentation, or related services
+   provided by Silicon Labs.
 
    “Licensee” or “you” means the acquirer of the license rights granted by
    this Agreement. If you are an individual working solely on your own
@@ -167,7 +176,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    and downloading the Micrium Software, subject to your compliance with
    the terms of this Agreement, Silicon Labs hereby grants you a limited,
    non-exclusive, nontransferable license for the Term (as described in
-   Section 23), as follows:
+   Section 25), as follows:
 
    2.1.1. You and your Authorized Subcontractors may modify the Source
    Code version of Micrium Software for the sole purpose of adapting the
@@ -540,18 +549,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    download or use the BLE Homekit software unless you have executed a MFi
    License with Apple.
 
-   9.3. Silicon Labs has licensed emWin software, including libraries and
-   executables and related documentation (collectively “emWin Library”)
-   from Segger Microcontroller GmbH.  You are entitled to use the emWin
-   Library free of charge, subject to the following conditions, which you
-   accept by virtue of accepting the terms of this Agreement: (a) you may
-   use the emWin library exclusively with EFM 32-bit microcontrollers and
-   EFR radios; (b) you may not use the emWin Library to create or develop
-   software that is similar to or competitive with the emWin Library; and
-   (c) you may not modify the documentation that accompanies the emWin
-   Library.
-
-   9.4. Silicon Labs does not make any endorsements or representations
+   9.3. Silicon Labs does not make any endorsements or representations
    concerning Third Party Software and disclaims all implied warranties
    concerning Third Party Software. Third Party Software is offered “AS
    IS.”
@@ -603,7 +601,35 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    Labs to be able to incorporate such changes into the Silicon Labs
    Software.
 
-14. Regulatory Compliance.
+14. Depricated Software.
+
+   Deprecated Software is not available for download and may have been
+   replaced with a newer, updated software solution.  You are advised to
+   transition to the latest versions of the software to ensure you benefit
+   from current features, improvements, and security updates provided by
+   Silicon Labs. Silicon Labs does not recommend Deprecated Software for
+   new designs. Silicon Labs does not offer any warranties or support on
+   Deprecated Software and disclaims all implied warranties.  If
+   Deprecated Software was Third Party Software, you may no longer
+   download such software from Silicon Labs.
+
+
+   15. Feedback.
+
+   Licensee may from time to time provide Feedback to Silicon Labs
+   regarding the Software, Documentation, or related services. Silicon
+   Labs may freely use, copy, disclose, sublicense, distribute, and
+   exploit such Feedback in any manner without any obligation, payment, or
+   restriction based on intellectual property rights or otherwise.
+   Licensee hereby grants to Silicon Labs a perpetual, irrevocable,
+   worldwide, royalty-free license to use any Feedback provided by
+   Licensee in any manner and in any form at the sole discretion of
+   Silicon Labs. Silicon Labs is not obligated to use any Feedback and
+   does not waive any of its rights as a consequence of its use or
+   integration of Feedback.
+
+
+16. Regulatory Compliance.
 
    Silicon Labs does not warrant that Software or any Application will
    comply with the regulatory requirements of the United States or any
@@ -611,7 +637,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    requirements and for obtaining necessary government certifications, if
    any.
 
-15. License Fee and Royalties.
+17. License Fee and Royalties.
 
    Unless Licensee has executed a Commercial License with Silicon Labs,
    Licensee is not obligated to pay any license fees or royalties to
@@ -620,7 +646,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    License, Licensee agree to pay all license fees, maintenance fees and
    subscription fees described in such Commercial License.
 
-16. No Resale Fees.
+18. No Resale Fees.
 
    Licensee may not directly or indirectly charge any fee or otherwise
    require or accept any type of monetary compensation solely for
@@ -629,7 +655,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    apply to the sale of hardware products having the Licensed Materials in
    object code form embedded within.
 
-17. Proprietary Rights.
+19. Proprietary Rights.
 
    All rights and title in and to the Licensed Materials, including
    without limitation, patents, copyrights, moral rights, trademarks and
@@ -637,7 +663,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    for the rights expressly granted herein, no other rights are granted to
    Licensee with respect to the Licensed Materials.
 
-18. Confidential Information.
+20. Confidential Information.
 
    You agree that the Licensed Materials contain confidential information,
    including trade secrets, know-how and other information, that comprise
@@ -648,7 +674,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    disclose or otherwise make available this information to any third
    party nor use such information except as authorized by this Agreement.
 
-19. Limited Warranty and Remedies.
+21. Limited Warranty and Remedies.
 
    Silicon Labs warrants that, during the Warranty Period, the Software
    will function substantially in accordance with the Documentation when
@@ -672,9 +698,9 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    distributor, (C) modifications to the Software or (D) Unauthorized Use
    of the Software.
 
-20. WARRANTY DISCLAIMER.
+22. WARRANTY DISCLAIMER.
 
-   EXCEPT AS PROVIDED ABOVE IN SECTION 19, THE LICENSED MATERIALS ARE
+   EXCEPT AS PROVIDED ABOVE IN SECTION 20, THE LICENSED MATERIALS ARE
    PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
    INCLUDING, WITHOUT LIMITATION, ANY IMPLIED WARRANTIES OF
    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT
@@ -688,7 +714,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    DAMAGES CAUSED BY THIRD PARTIES, INCLUDING MACILICOUS USE OF, OR
    INTEFERENCE WITH TRANSMISSION OF, LICENSEE’S DATA.
 
-21. LIMITATION OF LIABILITY.
+23. LIMITATION OF LIABILITY.
 
    SILICON LABS’ SOLE OBLIGATION OR LIABILITY UNDER THIS AGREEMENT IS THE
    REPAIR OR REPLACEMENT OF THE LICENSED MATERIALS ACCORDING TO THE
@@ -708,7 +734,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    ($1.00 USD). YOU ACKNOWLEDGE THAT THE AMOUNT PAID BY YOU FOR THE
    LICENSED MATERIALS REFLECTS THIS ALLOCATION OF RISK.
 
-22. Data Collection.
+24. Data Collection.
 
    To the extent that Silicon Labs Devices collect, store or transfer
    Personal Information, Silicon Labs may use such Personal Information
@@ -726,7 +752,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    (c) unauthorized access to or misuse of Personal Information by third
    parties.
 
-23. Term and Termination.
+25. Term and Termination.
 
    This Agreement will take effect on the date the Licensed Materials are
    acquired by or delivered to Licensee, and will remain in effect unless
@@ -747,7 +773,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    damages, and Silicon Labs’ proprietary rights, shall survive any
    termination of this Agreement for any reason.
 
-24. Termination of License.
+26. Termination of License.
 
    If you institute patent litigation against Silicon Labs or any of its
    Affiliates (including a cross-claim or counterclaim in a lawsuit)
@@ -756,20 +782,20 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    Agreement for that Licensed Program shall terminate as of the date such
    litigation is filed.
 
-25. Export Restrictions.
+27. Export Restrictions.
 
    You may not export or re-export the Software or any Licensed Programs,
    or any copy thereof, in violation of any applicable laws or
    regulations.
 
-26. Amendments.
+28. Amendments.
 
    This Agreement may be amended unilaterally by Silicon Labs at any time.
    The most recent version of this Agreement supersedes and replaces all
    prior versions. In the event of any conflicting terms, the terms of the
    most recent version of this Agreement shall control.
 
-27. Miscellaneous.
+29. Miscellaneous.
 
    This Agreement sets forth the entire agreement and understanding
    between the parties and neither party shall be bound by any conditions,
@@ -790,7 +816,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    provision shall be modified or interpreted in a manner to make it
    enforceable.
 
-28. Governing Law.
+30. Governing Law.
 
    This Agreement shall be governed by the laws of the State of Texas,
    United States of America, without regard to that state’s conflicts of
@@ -808,7 +834,7 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    preclude parties from seeking provisional remedies in aid of
    arbitration from a court of appropriate jurisdiction.
 
-29. Injunctive Relief.
+31. Injunctive Relief.
 
    The copying, disclosure, or use of the Software in a manner
    inconsistent with any provision of this Agreement or the improper use
@@ -818,14 +844,14 @@ HAVE SELECTED, AND ALL UPDATES AND VERSIONS OF SUCH SOFTWARE.
    but not limited to temporary restraining orders, preliminary
    injunctions and permanent injunctions.
 
-30. Silicon Labs Trademarks.
+32. Silicon Labs Trademarks.
 
    Silicon Labs and the Silicon Labs logo are trademarks of Silicon
    Laboratories Inc. in the United States and other countries. No use of
    the Silicon Labs trademarks by Licensee is implied or consented to by
    Silicon Labs by entering into this Agreement.
 
-31. Commercial Computer Software.
+33. Commercial Computer Software.
 
    If Licensee is an agency of the U.S. Government, the following will
    apply: The Software has been developed entirely at private expense, is
