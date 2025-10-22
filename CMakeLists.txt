@@ -37,7 +37,7 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 include( ExternalProject )
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pipe -Werror -Wparentheses -Wno-array-bounds -Wno-unused-result -std=gnu99 -D_DEFAULT_SOURCE")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pipe -Werror -Wno-error=cpp -Wparentheses -Wno-array-bounds -Wno-unused-result -std=gnu99 -D_DEFAULT_SOURCE")
 
 
 if(DEFINED ENABLE_CODE_COVERAGE)

@@ -86,7 +86,12 @@ setup/debian/stretch: /etc/apt/sources.list /etc/os-release
 	${sudo} apt-get update
 	${sudo} apt-get install -y ${packages}
 
-setup/debian: setup/debian/stretch
+setup/debian/buster: /etc/apt/sources.list /etc/os-release
+	grep 'VERSION="10 (buster)"' /etc/os-release
+	${sudo} apt-get update
+	${sudo} apt-get install -y ${packages}
+
+setup/debian: setup/debian/buster
 	echo "# $@"
 
 setup: setup/debian
