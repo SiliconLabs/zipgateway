@@ -54,6 +54,7 @@
 #ifndef __PROCESS_H__
 #define __PROCESS_H__
 
+#include <stdatomic.h>
 #include "sys/pt.h"
 #include "sys/cc.h"
 
@@ -323,7 +324,8 @@ struct process {
 #endif
   PT_THREAD((* thread)(struct pt *, process_event_t, process_data_t));
   struct pt pt;
-  unsigned char state, needspoll;
+  atomic_char state;
+  unsigned char needspoll;
 };
 
 /**

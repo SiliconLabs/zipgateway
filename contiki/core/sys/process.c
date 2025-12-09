@@ -46,6 +46,7 @@
 
 //#include <stdio.h>
 
+#include <stdatomic.h>
 #include "sys/process.h"
 #include "sys/arg.h"
 
@@ -75,7 +76,7 @@ static struct event_data events[PROCESS_CONF_NUMEVENTS];
 process_num_events_t process_maxevents;
 #endif
 
-static volatile unsigned char poll_requested;
+static atomic_uchar poll_requested;
 
 #define PROCESS_STATE_NONE        0
 #define PROCESS_STATE_RUNNING     1
@@ -119,7 +120,7 @@ process_start(struct process *p, const char *arg) CC_REENTRANT_ARG
   /* Put on the procs list.*/
   p->next = process_list;
   process_list = p;
-  p->state = PROCESS_STATE_RUNNING;
+  atomic_store_explicit(&p->state, PROCESS_STATE_RUNNING, memory_order_release);
   PT_INIT(&p->pt);
 
 #if ! CC_NO_VA_ARGS
@@ -149,7 +150,7 @@ exit_process(struct process *p, struct process *fromprocess) CC_REENTRANT_ARG
 
   if(process_is_running(p)) {
     /* Process was running */
-    p->state = PROCESS_STATE_NONE;
+    atomic_store_explicit(&p->state, PROCESS_STATE_NONE, memory_order_release);
 
     /*
      * Post a synchronous event to all processes to inform them that
@@ -189,27 +190,27 @@ call_process(struct process *p, process_event_t ev, process_data_t data) CC_REEN
   int ret;
 
 #if DEBUG
-  if(p->state == PROCESS_STATE_CALLED) {
+  if(atomic_load_explicit(&p->state, memory_order_acquire) == PROCESS_STATE_CALLED) {
 #if ! CC_NO_VA_ARGS
     printf("process: process '%s' called again with event %bu\n", PROCESS_NAME_STRING(p), ev);
 #endif
   }
 #endif /* DEBUG */
 
-  if((p->state & PROCESS_STATE_RUNNING) &&
+  if((atomic_load_explicit(&p->state, memory_order_acquire) & PROCESS_STATE_RUNNING) &&
      p->thread != NULL) {
 #if ! CC_NO_VA_ARGS
     PRINTF("process: calling process '%s' with event %bu\n", PROCESS_NAME_STRING(p), ev);
 #endif
     process_current = p;
-    p->state = PROCESS_STATE_CALLED;
+    atomic_store_explicit(&p->state, PROCESS_STATE_CALLED, memory_order_release);
     ret = p->thread(&p->pt, ev, data);
     if(ret == PT_EXITED ||
        ret == PT_ENDED ||
        ev == PROCESS_EVENT_EXIT) {
       exit_process(p, p);
     } else {
-      p->state = PROCESS_STATE_RUNNING;
+      atomic_store_explicit(&p->state, PROCESS_STATE_RUNNING, memory_order_release);
     }
   }
 #if 0
@@ -244,7 +245,7 @@ process_init(void)
 }
 /*---------------------------------------------------------------------------*/
 /*
- * Call each process' poll handler.
+ * Call each process' poll handler if and only if poll_requested flag was set.
  */
 /*---------------------------------------------------------------------------*/
 static void
@@ -252,11 +253,16 @@ do_poll(void) CC_REENTRANT_ARG
 {
   struct process *p;
 
-  poll_requested = 0;
+  // Always clear poll request flag; only continue if flag was previously set
+  char previous_poll_requested = atomic_exchange_explicit(&poll_requested, 0, memory_order_acq_rel);
+  if (previous_poll_requested == 0) {
+    return;
+  }
+
   /* Call the processes that needs to be polled. */
   for(p = process_list; p != NULL; p = p->next) {
     if(p->needspoll) {
-      p->state = PROCESS_STATE_RUNNING;
+      atomic_store_explicit(&p->state, PROCESS_STATE_RUNNING, memory_order_release);
       p->needspoll = 0;
       call_process(p, PROCESS_EVENT_POLL, NULL);
     }
@@ -304,9 +310,7 @@ do_event(void) CC_REENTRANT_ARG
 
 	/* If we have been requested to poll a process, we do this in
 	   between processing the broadcast event. */
-	if(poll_requested) {
-	  do_poll();
-	}
+	do_poll();
 	call_process(p, ev, data);
       }
     } else {
@@ -315,7 +319,7 @@ do_event(void) CC_REENTRANT_ARG
       /* If the event was an INIT event, we should also update the
 	 state of the process. */
       if(ev == PROCESS_EVENT_INIT) {
-	receiver->state = PROCESS_STATE_RUNNING;
+        atomic_store_explicit(&p->state, PROCESS_STATE_RUNNING, memory_order_release);
       }
 
       /* Make sure that the process actually is running. */
@@ -328,20 +332,18 @@ int
 process_run(void)
 {
   /* Process poll events. */
-  if(poll_requested) {
-    do_poll();
-  }
+  do_poll();
 
   /* Process one event from the queue */
   do_event();
 
-  return nevents + poll_requested;
+  return nevents + atomic_load_explicit(&poll_requested, memory_order_acquire);
 }
 /*---------------------------------------------------------------------------*/
 int
 process_nevents(void)
 {
-  return nevents + poll_requested;
+  return nevents + atomic_load_explicit(&poll_requested, memory_order_acquire);
 }
 /*---------------------------------------------------------------------------*/
 int
@@ -405,10 +407,11 @@ void
 process_poll(struct process *p) CC_REENTRANT_ARG
 {
   if(p != NULL) {
-    if(p->state == PROCESS_STATE_RUNNING ||
-       p->state == PROCESS_STATE_CALLED) {
+    char running_state = atomic_load_explicit(&p->state, memory_order_acquire);
+    if(running_state == PROCESS_STATE_RUNNING ||
+       running_state == PROCESS_STATE_CALLED) {
       p->needspoll = 1;
-      poll_requested = 1;
+      atomic_store_explicit(&poll_requested, 1, memory_order_release);
     }
   }
 }
@@ -416,5 +419,5 @@ process_poll(struct process *p) CC_REENTRANT_ARG
 int
 process_is_running(struct process *p) CC_REENTRANT_ARG
 {
-  return p->state != PROCESS_STATE_NONE;
+  return atomic_load_explicit(&p->state, memory_order_acquire) != PROCESS_STATE_NONE;
 }
