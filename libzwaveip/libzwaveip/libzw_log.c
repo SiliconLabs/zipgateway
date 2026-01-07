@@ -16,6 +16,7 @@
 
 #include "libzw_log.h"
 
+#include <stdatomic.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -78,8 +79,8 @@ static __thread char my_thread_name[30];
 static pthread_mutex_t log_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int thread_count = 0;
 static const char *severity_names[LOGLVL_NONE];
-static volatile log_severity_t log_filter_level = LOGLVL_TRACE;
-static volatile log_severity_t log_ui_message_level = LOGLVL_WARN;
+static atomic_int log_filter_level = (int)LOGLVL_TRACE;
+static atomic_int log_ui_message_level = (int)LOGLVL_WARN;
 static FILE *log_file = NULL;
 static bool initialized = false;
 
@@ -129,22 +130,12 @@ bool libzw_log_init(const char *path) {
 
 log_severity_t libzw_log_set_filter_level(log_severity_t level)
 {
-  pthread_mutex_lock(&log_mutex);
-  log_severity_t old = log_filter_level;
-  log_filter_level = level;
-  pthread_mutex_unlock(&log_mutex);
-
-  return old;
+  return atomic_exchange_explicit(&log_filter_level, (int)level, memory_order_relaxed);
 }
 
 log_severity_t libzw_log_set_ui_message_level(log_severity_t level)
 {
-  pthread_mutex_lock(&log_mutex);
-  log_severity_t old = log_ui_message_level;
-  log_ui_message_level = level;
-  pthread_mutex_unlock(&log_mutex);
-
-  return old;
+  return atomic_exchange_explicit(&log_ui_message_level, (int)level, memory_order_relaxed);
 }
 
 bool libzw_log_check_severity(log_severity_t severity)
@@ -194,10 +185,7 @@ void libzw_log(log_severity_t severity, const char *file, uint32_t line, const c
       fflush(log_file);
       pthread_mutex_unlock(&log_mutex);
 
-      /* Ideally this section should also be protected by log_mutex (or another
-       * mutex), but since they can potentially be redefined to something that
-       * does not return quickly it's left unprotected for now. */
-      if (severity >= log_ui_message_level) {
+      if (severity >= (log_severity_t)atomic_load_explicit(&log_ui_message_level, memory_order_relaxed)) {
         if (severity >= LOGLVL_WARN) {
           UI_MSG_ERR("%s\n", buf);
         } else {
