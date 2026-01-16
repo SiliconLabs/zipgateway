@@ -319,7 +319,8 @@ do_event(void) CC_REENTRANT_ARG
       /* If the event was an INIT event, we should also update the
 	 state of the process. */
       if(ev == PROCESS_EVENT_INIT) {
-        atomic_store_explicit(&p->state, PROCESS_STATE_RUNNING, memory_order_release);
+        atomic_store_explicit(&receiver->state, PROCESS_STATE_RUNNING, memory_order_release);
+
       }
 
       /* Make sure that the process actually is running. */
