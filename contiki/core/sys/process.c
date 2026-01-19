@@ -261,9 +261,9 @@ do_poll(void) CC_REENTRANT_ARG
 
   /* Call the processes that needs to be polled. */
   for(p = process_list; p != NULL; p = p->next) {
-    if(p->needspoll) {
+    if(p->needspoll) { // Read after atomic exchange of `poll_requested`
       atomic_store_explicit(&p->state, PROCESS_STATE_RUNNING, memory_order_release);
-      p->needspoll = 0;
+      p->needspoll = 0; // Happens after atomic exchange of `poll_requested`
       call_process(p, PROCESS_EVENT_POLL, NULL);
     }
   }
@@ -411,7 +411,7 @@ process_poll(struct process *p) CC_REENTRANT_ARG
     char running_state = atomic_load_explicit(&p->state, memory_order_acquire);
     if(running_state == PROCESS_STATE_RUNNING ||
        running_state == PROCESS_STATE_CALLED) {
-      p->needspoll = 1;
+      p->needspoll = 1; // Happens before atomic store of `poll_requested`
       atomic_store_explicit(&poll_requested, 1, memory_order_release);
     }
   }

@@ -324,7 +324,7 @@ struct process {
 #endif
   PT_THREAD((* thread)(struct pt *, process_event_t, process_data_t));
   struct pt pt;
-  atomic_char state;
+  atomic_uchar state;
   unsigned char needspoll;
 };
 
