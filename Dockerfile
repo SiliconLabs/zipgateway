@@ -1,12 +1,12 @@
 #!/bin/echo run with: docker build . -f
 # -*- coding: utf-8 -*-
 
-FROM arm32v7/debian:stretch
-ENV target_debian_arch armhf
+FROM arm32v7/debian:stretch AS base
+ENV target_debian_arch=armhf
 
-LABEL maintainer="Philippe Coval <philippe.coval@silabs.com>"
+LABEL maintainer="Laudin Molina Troconis <laudin.molinatroconis@silabs.com>"
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN echo "# log: Setup system"  \
   && set -x \
@@ -16,17 +16,20 @@ RUN echo "# log: Setup system"  \
   && apt-get install -y sudo make \
   && date -u
 
-ENV project zipgateway
-ENV workdir /usr/local/src/${project}
+FROM base AS dev
+ENV project=zipgateway
+ENV workdir=/usr/local/src/${project}
 WORKDIR ${workdir}
 COPY helper.mk ${workdir}
-RUN echo "# log: Install ${project}" \
+RUN echo "# log: Setup dependencies for ${project}" \
   && set -x  \
   && ./helper.mk setup/debian/stretch \
+  && apt-get autoremove --purge \
+  && apt-get clean \
   && date -u
 
+FROM dev AS runtime
 COPY . ${workdir}
-WORKDIR ${workdir}
 RUN echo "# log: Build ${project}" \
   && set -x  \
   && ./helper.mk \
