@@ -810,7 +810,12 @@ PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
             if (SupportsCmdClass(current_session_ll->fb->param.dnode,
                 COMMAND_CLASS_TRANSPORT_SERVICE))
             {
-              DBG_PRINTF("SEND_EVENT_SEND_NEXT_LL | SupportsCmdClass | ZW_TransportService_SendData \n");
+              DBG_PRINTF("SEND_EVENT_SEND_NEXT_LL | SupportsCmdClass | ZW_TransportService_SendData\n"
+                         "snode=%u dnode=%u frame_len=%u dnode_low8=%u\n",
+                         (unsigned)current_session_ll->fb->param.snode,
+                         (unsigned)current_session_ll->fb->param.dnode,
+                         (unsigned)current_session_ll->fb->frame_len,
+                         (unsigned)(current_session_ll->fb->param.dnode & 0xFFu));
               //ASSERT(current_session_ll->param.snode == MyNodeID); //TODO make transport service bridge aware
               rc = ZW_TransportService_SendData(&current_session_ll->fb->param,
                   (u8_t*) current_session_ll->fb->frame_data,
