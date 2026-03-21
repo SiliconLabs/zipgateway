@@ -22,7 +22,7 @@ docker_arch_i386=i386
 docker_arch?=$(docker_arch_${target_debian_arch})
 
 packages?=make cmake time file git sudo
-packages+=build-essential pkg-config bison flex python
+packages+=build-essential pkg-config bison flex python ruby
 packages+=libusb-1.0-0-dev libssl-dev libxml2-dev libjson-c-dev
 packages+=doxygen xsltproc plantuml roffit
 packages+=radvd parprouted bridge-utils net-tools zip unzip
