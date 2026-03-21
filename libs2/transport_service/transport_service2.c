@@ -107,7 +107,7 @@ typedef void (*ZW_CommandHandler_Callback_t)(ts_param_t* p, ZW_APPLICATION_TX_BU
 #endif
 
 #ifndef __C51__
-extern uint8_t ZW_SendData_Bridge(uint8_t, uint8_t, uint8_t *, uint8_t, uint8_t, VOID_CALLBACKFUNC(completedFunc)(uint8_t, TX_STATUS_TYPE*));
+extern uint8_t ZW_SendData_Bridge(uint16_t, uint16_t, uint8_t *, uint8_t, uint8_t, VOID_CALLBACKFUNC(completedFunc)(uint8_t, TX_STATUS_TYPE*));
 #endif /* ifndef __C51__ */
 
 #endif
