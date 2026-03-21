@@ -78,6 +78,74 @@ if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "C51")
     endif()
     set(CMOCK_RB "${CMOCK_RB_DEFAULT}" CACHE FILEPATH "Path to CMock lib/cmock.rb used by regen_mock_zw_transport_api" FORCE)
   endif()
+
+  set(CMOCK_RUNTIME_C "${CMOCK_ROOT}/src/cmock.c"
+      CACHE FILEPATH "Path to CMock runtime cmock.c used by unit tests")
+  if(NOT EXISTS "${CMOCK_RUNTIME_C}")
+    message(FATAL_ERROR "CMock runtime source not found: ${CMOCK_RUNTIME_C}")
+  endif()
+
+  set(CMOCK_GEN_DIR "${CMAKE_BINARY_DIR}/cmock_gen")
+  set(CMOCK_INPUT_DIR "${CMAKE_BINARY_DIR}/cmock-input")
+  set(CMOCK_INPUT_HEADER "${CMOCK_INPUT_DIR}/ZW_transport_api.h")
+  set(MOCK_ZW_TRANSPORT_API_C "${CMOCK_GEN_DIR}/MockZW_transport_api.c")
+  set(MOCK_ZW_TRANSPORT_API_H "${CMOCK_GEN_DIR}/MockZW_transport_api.h")
+
+  add_custom_command(
+          OUTPUT "${CMOCK_INPUT_HEADER}"
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${CMOCK_INPUT_DIR}"
+          COMMAND "${CMAKE_C_COMPILER}" -E -P
+                  -DZW_CONTROLLER_BRIDGE
+                  -I"${CMAKE_SOURCE_DIR}/Z-Wave/include"
+                  "${CMAKE_SOURCE_DIR}/Z-Wave/include/ZW_transport_api.h"
+                  -o "${CMOCK_INPUT_HEADER}"
+          DEPENDS "${CMAKE_SOURCE_DIR}/Z-Wave/include/ZW_transport_api.h"
+          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          COMMENT "Preprocessing ZW_transport_api.h for CMock generation")
+
+  add_custom_command(
+          OUTPUT "${MOCK_ZW_TRANSPORT_API_C}" "${MOCK_ZW_TRANSPORT_API_H}"
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${CMOCK_GEN_DIR}"
+          COMMAND ${CMAKE_COMMAND} -E env ruby "${CMOCK_RB}"
+                  -o"${CMAKE_CURRENT_SOURCE_DIR}/cmock/cmock_config.yml"
+                  "${CMOCK_INPUT_HEADER}"
+          DEPENDS "${CMOCK_INPUT_HEADER}" "${CMAKE_CURRENT_SOURCE_DIR}/cmock/cmock_config.yml"
+          WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+          COMMENT "Generating MockZW_transport_api in build directory")
+  set_source_files_properties("${MOCK_ZW_TRANSPORT_API_C}" "${MOCK_ZW_TRANSPORT_API_H}" PROPERTIES GENERATED TRUE)
+
+  add_custom_target(regen_mock_zw_transport_api
+          DEPENDS "${MOCK_ZW_TRANSPORT_API_C}" "${MOCK_ZW_TRANSPORT_API_H}")
+
+  add_unity_test(NAME test_t2_zipgw_runtime_nodeid FILES
+          test_t2_zipgw_runtime_nodeid.c
+          "${CMOCK_RUNTIME_C}"
+          "${MOCK_ZW_TRANSPORT_API_C}"
+          ${CMAKE_CURRENT_SOURCE_DIR}/../transport_service/transport_service2.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/../transport_service/transport2_fsm.c)
+  add_dependencies(test_t2_zipgw_runtime_nodeid regen_mock_zw_transport_api)
+  target_compile_definitions(test_t2_zipgw_runtime_nodeid PRIVATE ZIPGW)
+
+  # Explicitly undefine NEW_TEST_T2 here so this regression test follows the
+  # production TS code path.
+  target_compile_options(test_t2_zipgw_runtime_nodeid PRIVATE -U NEW_TEST_T2)
+  # Generated CMock code may reference legacy Unity detail macros that are
+  # not available in the Unity variant used by this tree.
+  target_compile_options(test_t2_zipgw_runtime_nodeid PRIVATE
+          -include "${CMAKE_CURRENT_SOURCE_DIR}/cmock/cmock_legacy_unity_compat.h")
+  target_include_directories(test_t2_zipgw_runtime_nodeid PRIVATE
+          ${CMAKE_BINARY_DIR}
+          "${CMOCK_GEN_DIR}"
+          "${CMOCK_ROOT}/src"
+          ${CMAKE_CURRENT_SOURCE_DIR}/../transport_service/
+          ${CMAKE_CURRENT_SOURCE_DIR}/../include/
+          ${CMAKE_SOURCE_DIR}/src
+          ${CMAKE_SOURCE_DIR}/src/transport
+          ${CMAKE_SOURCE_DIR}/src/utls
+          ${CMAKE_SOURCE_DIR}/contiki/core
+          ${CMAKE_SOURCE_DIR}/contiki/core/sys
+          ${CMAKE_SOURCE_DIR}/contiki/platform/linux
+          ${CMAKE_SOURCE_DIR}/Z-Wave/include)
 endif()
 
 add_definitions( -DRANDLEN=64 )

@@ -1,0 +1,7 @@
+:cmock:
+  :mock_path: cmock_gen
+  :plugins:
+    - :ignore
+    - :ignore_arg
+    - :expect
+  :treat_externs: :include
