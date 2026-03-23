@@ -2,10 +2,13 @@
 
 services:
   dev:
-    image: zipgateway-dev
+    image: zipgateway-dev-${ARCH:-arm32v7}
     build:
       context: .
       target: dev
+      args:
+        ARCH: ${ARCH:-arm32v7}
+        TARGET_DEBIAN_ARCH: ${TARGET_DEBIAN_ARCH:-armhf}
     volumes:
       - .:/usr/local/src/zipgateway
     working_dir: /usr/local/src/zipgateway
@@ -18,6 +21,9 @@ services:
     build:
       context: .
       target: runtime
+      args:
+        ARCH: ${ARCH:-arm32v7}
+        TARGET_DEBIAN_ARCH: ${TARGET_DEBIAN_ARCH:-armhf}
     command: tests
     devices:
       - /dev/ttyACM0:/dev/ttyACM0

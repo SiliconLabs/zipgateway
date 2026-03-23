@@ -11,9 +11,15 @@ default: help all
 SELF?=${CURDIR}/helper.mk
 sudo?=sudo
 build_dir?=build
+compose?=docker-compose
 
 # TODO: adapt for arm and support 64bits
 target_debian_arch?=$(shell dpkg --print-architecture || echo 'i386')
+
+# Map Debian arch name to Docker image arch prefix
+docker_arch_armhf=arm32v7
+docker_arch_i386=i386
+docker_arch?=$(docker_arch_${target_debian_arch})
 
 packages?=make cmake time file git sudo
 packages+=build-essential pkg-config bison flex python
@@ -130,8 +136,17 @@ tests: ${build_dir}
 	cd ${build_dir} && ctest V=1
 
 docker-compose/up: docker-compose.yml
-	docker version
-	docker-compose --version
-	docker-compose up --build
+	${compose} --version
+	ARCH=${docker_arch} TARGET_DEBIAN_ARCH=${target_debian_arch} \
+	  ${compose} up --build
 
 docker/run: docker-compose/up
+
+docker/build/dev: docker-compose.yml
+	${compose} --version
+	ARCH=${docker_arch} TARGET_DEBIAN_ARCH=${target_debian_arch} \
+	  ${compose} up dev --build
+
+docker/run/dev: docker-compose.yml
+	ARCH=${docker_arch} TARGET_DEBIAN_ARCH=${target_debian_arch} \
+	  ${compose} run dev
