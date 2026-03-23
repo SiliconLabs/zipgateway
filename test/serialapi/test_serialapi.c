@@ -126,7 +126,7 @@ uint8_t Device_SendFrame(session_t *session) {
 
   {
     fd_set rfds;
-    struct timeval tv = {.tv_usec = 100};
+    struct timeval tv = {.tv_usec = 1000};
 
     FD_ZERO(&rfds);
     FD_SET(end_device, &rfds);
