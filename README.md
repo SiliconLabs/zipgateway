@@ -150,6 +150,13 @@ To speed up the build process, native build can be deported to the host using
 different containerization techniques (docker, systemd, chroot, qemu, binfmt).
 Check the [DevTools](./DevTools/) directory for more information.
 
+Use a Docker container for development:
+
+```sh
+ARCH=i386 TARGET_DEBIAN_ARG=i386 docker compose up dev --build
+ARCH=i386 TARGET_DEBIAN_ARG=i386 docker compose run dev
+```
+
 ## MORE
 
 Additional documentation is available in doc folder or online:
