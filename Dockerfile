@@ -1,8 +1,12 @@
 #!/bin/echo run with: docker build . -f
 # -*- coding: utf-8 -*-
 
-FROM arm32v7/debian:stretch AS base
-ENV target_debian_arch=armhf
+ARG ARCH=arm32v7
+ARG TARGET_DEBIAN_ARCH=armhf
+
+FROM docker.io/${ARCH}/debian:stretch AS base
+ARG TARGET_DEBIAN_ARCH=armhf
+ENV target_debian_arch=${TARGET_DEBIAN_ARCH}
 
 LABEL maintainer="Laudin Molina Troconis <laudin.molinatroconis@silabs.com>"
 
