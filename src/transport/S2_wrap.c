@@ -603,7 +603,7 @@ uint8_t S2_send_frame(struct S2* ctxt,const s2_connection_t* conn, uint8_t* buf,
   p.snode = conn->l_node;
   p.dnode = conn->r_node;
   p.tx_flags = conn->zw_tx_options;
-  LOG_PRINTF(" Sending S2_send_frame %i %d -> %d\n", len, p.snode, p.dnode);
+  LOG_PRINTF("Sending S2_send_frame %i %d -> %d\n", len, p.snode, p.dnode);
   transmit_start_time = clock_time();
   return send_data(&p, buf,  len,S2_send_frame_callback,ctxt);
 }
