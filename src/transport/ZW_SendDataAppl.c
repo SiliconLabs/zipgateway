@@ -288,25 +288,36 @@ send_data_callback_func(u8_t status, TX_STATUS_TYPE* ts)
     return;
   }
 
-  
-  // if (status == TRANSMIT_COMPLETE_NO_ACK)
+  // TS and other senders report TRANSMIT_COMPLETE_FAIL. Pop and
+  // free the session so the queue advances; the original hold-for-retry
+  // behaviour (previously on NO_ACK) is preserved only when the resend watchdog
+  // is active.
   if (status == TRANSMIT_COMPLETE_FAIL)
   {
     etimer_stop(&emergency_timer);
 
     if(resend_counter == 0) {
-      send_data_appl_session_t *s = list_head(send_data_list);
+      send_data_appl_session_t *s = list_pop(send_data_list);
       if (s)
       {
         if (s->callback)
         {
           s->callback(status, s->user, ts);
         }
+        zw_frame_buffer_free(s->fb);
+
+        char refcount = memb_free(&session_memb, s);
+        if(refcount == -1) {
+          ERR_PRINTF("attempt to deallocate illegal memory block\n");
+          ASSERT(0);
+        }
       }
       else
       {
+        DBG_PRINTF("event in the send data list is NULL\n");
         ASSERT(0);
       }
+      process_post(&ZW_SendDataAppl_process, SEND_EVENT_SEND_NEXT_LL, NULL);
     }
     
     lock_ll = FALSE;
