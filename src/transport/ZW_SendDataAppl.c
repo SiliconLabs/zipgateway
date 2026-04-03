@@ -912,3 +912,24 @@ PROCESS_THREAD(ZW_SendDataAppl_process, ev, data)
   }
 PROCESS_END();
 }
+
+#ifdef UNIT_TEST
+void ZW_SendDataAppl_set_lock_ll(uint8_t value)        { lock_ll = value; }
+void ZW_SendDataAppl_set_resend_counter(uint8_t value) { resend_counter = value; }
+uint8_t ZW_SendDataAppl_get_lock_ll(void)              { return lock_ll; }
+
+void *ZW_SendDataAppl_alloc_session(void)              { return memb_alloc(&session_memb); }
+void  ZW_SendDataAppl_push_session(void *s)            { list_push(send_data_list, s); }
+void *ZW_SendDataAppl_list_head(void)                  { return list_head(send_data_list); }
+
+/*
+ * Drive send_data_callback_func(TRANSMIT_COMPLETE_FAIL, NULL) directly.
+ * This is the same call the emergency timer makes when the NCP misses a
+ * callback. Exposing it here lets tests trigger the FAIL path without
+ * needing a running Contiki scheduler.
+ */
+void ZW_SendDataAppl_trigger_fail_for_test(void)
+{
+  send_data_callback_func(TRANSMIT_COMPLETE_FAIL, NULL);
+}
+#endif /* UNIT_TEST */
