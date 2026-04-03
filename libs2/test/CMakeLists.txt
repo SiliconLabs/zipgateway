@@ -148,6 +148,34 @@ if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "C51")
           ${CMAKE_SOURCE_DIR}/Z-Wave/include)
 endif()
 
+# ZW_SendDataAppl.c is compiled directly into the test (not taken from the
+# pre-built zipgateway-lib) so that the -DUNIT_TEST flag (set globally by
+# add_definitions at the top of this file) is in effect.  This is required
+# to compile the UNIT_TEST seam functions that expose private state.
+#
+# The remaining zipgateway-lib symbols that ZW_SendDataAppl.c needs are
+# provided either by linking zipgateway-lib or by --wrap stubs in the test.
+# ---------------------------------------------------------------------------
+if (${CMAKE_PROJECT_NAME} MATCHES "zipgateway")
+  add_unity_test(NAME test_send_data_callback
+          FILES test_send_data_callback.c
+                ${CMAKE_SOURCE_DIR}/src/transport/ZW_SendDataAppl.c
+                ${CMAKE_SOURCE_DIR}/test/zipgateway_main_stubs.c
+          LIBRARIES zipgateway-lib)
+
+  set_target_properties(test_send_data_callback PROPERTIES LINK_FLAGS
+    "-Wl,-wrap=process_post \
+     -Wl,-wrap=process_exit \
+     -Wl,-wrap=process_start \
+     -Wl,-wrap=get_queue_state \
+     -Wl,-wrap=zw_frame_buffer_free \
+     -Wl,-wrap=etimer_stop \
+     -Wl,-wrap=etimer_set \
+     -Wl,-wrap=etimer_expired \
+     -Wl,-wrap=sec0_abort_all_tx_sessions \
+     -Wl,-wrap=ima_send_data_done")
+endif()
+
 add_definitions( -DRANDLEN=64 )
 add_unity_test(NAME test_ctr_dbrg FILES test_ctr_dbrg.c ../crypto/ctr_drbg/ctr_drbg.c ../crypto/aes/aes.c)
 
