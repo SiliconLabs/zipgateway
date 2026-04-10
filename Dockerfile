@@ -4,7 +4,7 @@
 ARG ARCH=arm32v7
 ARG TARGET_DEBIAN_ARCH=armhf
 
-FROM docker.io/${ARCH}/debian:stretch AS base
+FROM docker.io/${ARCH}/debian:stretch AS newbase
 ARG TARGET_DEBIAN_ARCH=armhf
 ENV target_debian_arch=${TARGET_DEBIAN_ARCH}
 
