@@ -75,7 +75,7 @@ void ZW_SendRequest_init();
  * Abort send request for particular nodeid.
  * This command is used when removing the node. All pending Send Requests to that node need to be aborted.
  */
-void ZW_Abort_SendRequest(uint8_t nodeid);
+void ZW_Abort_SendRequest(nodeid_t nodeid);
 
 /**
  * @}

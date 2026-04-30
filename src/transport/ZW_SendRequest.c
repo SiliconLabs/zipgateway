@@ -131,7 +131,7 @@ fail:
   return FALSE;
 }
 
-void ZW_Abort_SendRequest(uint8_t n)
+void ZW_Abort_SendRequest(nodeid_t n)
 {
 //  DBG_PRINTF("--------------- Inside ZW_Abort_SendRequest()\n");
   send_request_state_t* s;
