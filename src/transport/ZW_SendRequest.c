@@ -192,3 +192,33 @@ ZW_SendRequest_init()
   memb_init(&reqs);
   list_init(reqs_list);
 }
+
+#ifdef UNIT_TEST
+/* Test seams.
+ * Inject sessions into the file-static reqs_list
+ * without also mocking the contiki list/memb machinery, so we expose two
+ * narrow helpers used only by tests. */
+void *ZW_SendRequest_inject_waiting(nodeid_t snode,
+                                    ZW_SendRequst_Callback_t callback,
+                                    void *user)
+{
+  send_request_state_t *s = memb_alloc(&reqs);
+  if (!s) return NULL;
+  s->state = REQ_WAITING;
+  s->param.snode = snode;
+  s->callback = callback;
+  s->user = user;
+  s->timeout = 0;
+  s->round_trip_start = 0;
+  list_add(reqs_list, s);
+  return s;
+}
+
+int ZW_SendRequest_pending_count(void)
+{
+  int count = 0;
+  send_request_state_t *s;
+  for (s = list_head(reqs_list); s; s = list_item_next(s)) count++;
+  return count;
+}
+#endif /* UNIT_TEST */
