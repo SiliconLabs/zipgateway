@@ -243,9 +243,9 @@ BYTE SupportsSerialAPISetup_func(BYTE subcmd)
                    "beyond 1st byte of Extended Z-Wave API Setup Supported Sub"
                    "Commands bitmask, which is not supported.\n", subcmd);
     } else if (subcmd > 8) {
-      return (is_bit_num_set_in_byte(subcmd - 8, capabilities.supported_serialapi_bitmask[2]));
+      return (is_bit_num_set_in_byte(subcmd - 9, capabilities.supported_serialapi_bitmask[2]));
     } else if (subcmd > 0) {
-      return (is_bit_num_set_in_byte(subcmd ,capabilities.supported_serialapi_bitmask[1]));
+      return (is_bit_num_set_in_byte(subcmd - 1,capabilities.supported_serialapi_bitmask[1]));
     }
   } else { // Check the bitflag as only one bit is set
     return (capabilities.supported_serialapi_bitmask[0] & subcmd);
