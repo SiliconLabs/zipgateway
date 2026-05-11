@@ -2337,11 +2337,13 @@ LearnModeStatus(LEARN_INFO* inf)
  * will return 2. */
 uint16_t find_min_bitmask_len(uint8_t *buffer, uint16_t length)
 {
-    uint16_t i = 0;
-    while((i < length) && (buffer[i] != 0)) {
-      i++;
+    while (length > 0) {
+      if (buffer[length - 1] != 0) {
+        return length;
+      }
+      length--;
     }
-    return i;
+    return 0;
 }
 
 static uint16_t BuildFailedNodeListFrame(uint8_t* buffer, uint8_t seq)
