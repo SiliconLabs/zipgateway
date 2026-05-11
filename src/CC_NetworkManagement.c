@@ -2377,7 +2377,7 @@ static uint16_t BuildFailedNodeListFrame(uint8_t* buffer, uint8_t seq)
   }
   /* Calculate minimum len of failed node list bitmask that needs to be sent
    * and not whole ZW_MAX_NODES/8 */ 
-  lr_len = find_min_bitmask_len(NODEMASK_GET_LR(nlist), MAX_NODEMASK_LENGTH);
+  lr_len = find_min_bitmask_len(NODEMASK_GET_LR(nlist), MAX_LR_NODEMASK_LENGTH);
 
   memcpy(&f->failedNodeListData1, nlist, MAX_CLASSIC_NODEMASK_LENGTH );
   f->extendedNodeidMSB = lr_len >> 8;
