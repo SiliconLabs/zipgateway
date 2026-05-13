@@ -7,6 +7,7 @@
 #include "CC_FirmwareUpdate.h"
 #include "CC_Portal.h"
 #include "CC_Gateway.h"
+#include "CC_GatewayKeepAlive.h"
 #include "CC_Wakeup.h"
 #include "command_handler.h"
 #include "Mailbox.h"
@@ -141,7 +142,6 @@ BYTE ApplicationInitNIF(void)
   // NOTE: No need of getting LR node list here as we dont really need it
   // Even classic nodelist above is not used anywhere in this function
 
-
   LOG_PRINTF("%u00 series chip version %u serial api version %u\n",chip_type,chip_version,ver);
 
   if(ver <8) {
@@ -237,6 +237,10 @@ BYTE ApplicationInitNIF(void)
    * The extra classes from the config file is added securely
    */
   appNodeInfo_CC_Add();
+
+  /* Serial + NCP ready: init keep-alive state and query GetModuleCapabilities for list framing */
+  gw_keepalive_init();
+
   return 0;
 }
 

@@ -13,6 +13,7 @@ ADD_FLEX_BISON_DEPENDENCY(pvslexer pvsparser)
 set(HANDLER_SRC
 CC_InclusionController.c
 CC_Gateway.c
+CC_GatewayKeepAlive.c
 CC_Version.c
 CC_NetworkManagement.c
 CC_NetworkManagement_queue.c

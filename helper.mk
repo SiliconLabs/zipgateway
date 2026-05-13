@@ -71,7 +71,7 @@ ${build_dir}/CMakeCache.txt ${build_dir}/Makefile: CMakeLists.txt
 	mkdir -p ${@D}
 	${cmake} --version
 	${cmake} --help
-	git describe --tags --always --dirty 
+	-git describe --tags --always --dirty
 	cd ${@D} && ${cmake} ${cmake_options} ${CURDIR}
 	ls ${CURDIR}/$@
 

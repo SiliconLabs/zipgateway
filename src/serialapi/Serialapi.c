@@ -90,7 +90,7 @@ chip_data_t my_chip_data;
 #endif
 
 
-#define SupportsCommand(cmd) ((cmd==FUNC_ID_SERIAL_API_GET_CAPABILITIES) || (capabilities.supported_bitmask[((cmd-1)>>3)]  & (1<<((cmd-1) & 0x7))))
+#define SupportsCommand(cmd) ((cmd)==(FUNC_ID_SERIAL_API_GET_CAPABILITIES) || (cmd)==(FUNC_ID_SERIAL_API_HOST_HIBERNATION) || ((cmd)<=232 && (capabilities.supported_bitmask[(((cmd)-1)>>3)] & (1<<(((cmd)-1) & 0x7)))))
 
 void SerialAPI_ApplicationNodeInformation( BYTE listening, APPL_NODE_TYPE nodeType, BYTE *nodeParm, BYTE parmLength );
 static node_id_type_t SerialAPI_Setup_NodeID_BaseType_Set(node_id_type_t nodeid_basetype);
@@ -1342,6 +1342,48 @@ static void Dispatch( BYTE *pData , uint16_t len)
         SerialAPI_WatchdogStart();
       }
 
+      break;
+
+    case FUNC_ID_SERIAL_API_HOST_HIBERNATION:
+      {
+        SER_PRINTF("FUNC_ID_SERIAL_API_HOST_HIBERNATION: len=%u, subcmd=0x%02x\n", len, pData[IDX_DATA]);
+        if (len <= IDX_DATA)
+          break;
+        uint8_t subcmd = pData[IDX_DATA];
+        switch (subcmd)
+        {
+          case HOST_HIBERNATION_SUBCMD_DEVICE_LOST_REPORT:
+            {
+              /* Unsolicited: sub-command, node count, then n × (16-bit node ID, 16-bit last-seen). */
+              if (len < (IDX_DATA + 2))
+              {
+                SER_PRINTF("Device lost report: frame too short (len=%u)\n", len);
+                break;
+              }
+              uint8_t n = pData[IDX_DATA + 1];
+              if (n == 0)
+              {
+                SER_PRINTF("Device lost report: node count must be non-zero\n");
+                break;
+              }
+              if ((uint16_t)IDX_DATA + 2u + 4u * (uint16_t)n > len)
+              {
+                SER_PRINTF("Device lost report: length does not match node count (n=%u, len=%u)\n",
+                           n, len);
+                break;
+              }
+              if (callbacks != NULL && callbacks->OnDeviceLost != NULL)
+                callbacks->OnDeviceLost(&pData[IDX_DATA + 2], (uint16_t)n * 4u);
+            }
+            break;
+          default:
+            /* Sub-commands 0x00, 0x01, 0x03, 0x06 responses are consumed by
+             * their synchronous SendFrameWithResponse callers.
+             * Sub-command 0x06 (S2 Message Count) is request-response only
+             * host hibernation S2 sub-command — handled in SerialAPI_RequestS2MessageCountList. */
+            break;
+        }
+      }
       break;
 
     default:
@@ -3742,4 +3784,315 @@ ZW_NVRGetValue(BYTE offset, BYTE bLength, BYTE* pNVRValue)
   for(int i=0; i < bLength; i++ ) {
     pNVRValue[i] = buffer[IDX_DATA+i];
   }
+}
+
+/*============================================================================
+ * Host hibernation Serial API (0xF0 + sub-command)
+ *============================================================================*/
+
+int SerialAPI_SendImportantDeviceList(const void *entries, uint16_t count, uint8_t max_frame_length)
+{
+  const gw_important_node_entry_t *list = (const gw_important_node_entry_t *)entries;
+  uint8_t  nodes_per_frame;
+  uint16_t total_frames;
+  uint16_t frame_idx;
+  uint16_t start_idx;
+  uint8_t  node_count_this_frame;
+
+  if (count == 0 || list == NULL || max_frame_length < 8)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG;
+  }
+  if (max_frame_length > BUF_SIZE)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG;
+  }
+
+  /* Table 2.1: payload = SubCmd(1) + TotalFrames(1) + FrameIndex(1) + NodeCount(1) + 4*N = 4 + 4*N */
+  nodes_per_frame = (max_frame_length - 4) / 4;
+  if (nodes_per_frame == 0)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG;
+  }
+
+  /* Ceil(count / nodes_per_frame) */
+  total_frames = (count + (uint16_t)nodes_per_frame - 1) / (uint16_t)nodes_per_frame;
+  /* Wire fields TotalFramesCount / FrameIndex are 1 byte each (important-device list frame) */
+  if (total_frames > 255 || total_frames == 0)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG;
+  }
+
+  for (frame_idx = 1; frame_idx <= total_frames; frame_idx++)
+  {
+    start_idx = (frame_idx - 1) * (uint16_t)nodes_per_frame;
+    node_count_this_frame = nodes_per_frame;
+    if (start_idx + node_count_this_frame > count)
+    {
+      node_count_this_frame = (uint8_t)(count - start_idx);
+    }
+
+    idx = 0;
+    buffer[idx++] = HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_LIST;
+    buffer[idx++] = (uint8_t)total_frames;
+    buffer[idx++] = (uint8_t)frame_idx;
+    buffer[idx++] = node_count_this_frame;
+    for (uint8_t i = 0; i < node_count_this_frame; i++)
+    {
+      const gw_important_node_entry_t *e = &list[start_idx + i];
+      buffer[idx++] = (uint8_t)(e->node_id >> 8);
+      buffer[idx++] = (uint8_t)(e->node_id & 0xFF);
+      buffer[idx++] = (uint8_t)(e->keep_alive_win_min >> 8);
+      buffer[idx++] = (uint8_t)(e->keep_alive_win_min & 0xFF);
+    }
+
+    /* acknowledged_frame_with_response: SubCmd | Total Node Count | Command Status */
+    byLen = 0;
+    int ret = SendFrameWithResponse(FUNC_ID_SERIAL_API_HOST_HIBERNATION, buffer, idx, buffer, &byLen);
+    if (ret != conFrameReceived)
+    {
+      return SERIALAPI_HOST_HIBERNATION_ERR_TRANSPORT;
+    }
+    if (byLen < (IDX_DATA + 3) || buffer[IDX_DATA] != HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_LIST)
+    {
+      return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+    }
+    /* Table 2.3: Command Status in buffer[IDX_DATA + 2] */
+    {
+      uint8_t cmd_status = buffer[IDX_DATA + 2];
+      if (cmd_status != SERIALAPI_HOST_HIBERNATION_OK)
+      {
+        SER_PRINTF("ImportantDeviceList NCP error: status=0x%02x\n", cmd_status);
+        return (int)cmd_status;
+      }
+    }
+  }
+  return SERIALAPI_HOST_HIBERNATION_OK;
+}
+
+int SerialAPI_SendImportantDevicesClear(void)
+{
+  idx = 0;
+  buffer[idx++] = HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_CLEAR;
+  byLen = 0;
+  int ret = SendFrameWithResponse(FUNC_ID_SERIAL_API_HOST_HIBERNATION, buffer, idx, buffer, &byLen);
+  if (ret != conFrameReceived)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_TRANSPORT;
+  }
+  if (byLen >= (IDX_DATA + 2) && buffer[IDX_DATA] == HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_CLEAR)
+  {
+    uint8_t cmd_status = buffer[IDX_DATA + 1];
+    /* Clear status: see SERIALAPI_HOST_HIBERNATION_CLEAR_STATUS_* */
+    if (cmd_status == SERIALAPI_HOST_HIBERNATION_CLEAR_STATUS_NOT_ACCEPTED_OR_ERROR)
+    {
+      SER_PRINTF("ImportantDevicesClear rejected by NCP\n");
+    }
+    return (int)cmd_status;
+  }
+  return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+}
+
+/* Note: When sending this command with Host State to 0x00, Host application MUST clear the
+ * Important Device List using the Important Devices Clear Command. */
+int SerialAPI_NotifyHostState(uint8_t host_state, uint8_t severity_level,
+    uint8_t *ncp_severity_level)
+{
+  if (host_state != HOST_HIBERNATION_STATE_AWAKE && host_state != HOST_HIBERNATION_STATE_GOING_TO_SLEEP)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG;
+  }
+
+  idx = 0;
+  buffer[idx++] = HOST_HIBERNATION_SUBCMD_NOTIFY_HOST_STATE;
+  buffer[idx++] = host_state;
+  buffer[idx++] = severity_level;
+
+  byLen = 0;
+  int ret = SendFrameWithResponse(FUNC_ID_SERIAL_API_HOST_HIBERNATION, buffer, idx, buffer, &byLen);
+  if (ret != conFrameReceived)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_TRANSPORT;
+  }
+  /* Response: SubCmd(1) + CommandStatus(1) + SeverityLevel(1) */
+  if (byLen < (IDX_DATA + 3) || buffer[IDX_DATA] != HOST_HIBERNATION_SUBCMD_NOTIFY_HOST_STATE)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+  }
+
+  if (ncp_severity_level != NULL)
+  {
+    *ncp_severity_level = buffer[IDX_DATA + 2];
+  }
+
+  uint8_t cmd_status = buffer[IDX_DATA + 1];
+  if (cmd_status == 0x01)
+  {
+    return SERIALAPI_HOST_HIBERNATION_OK;
+  }
+  return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+}
+
+int SerialAPI_GetModuleCapabilities(uint8_t *max_devices, uint8_t *max_frame_length)
+{
+  if (max_devices == NULL || max_frame_length == NULL)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG;
+  }
+
+  idx = 0;
+  buffer[idx++] = HOST_HIBERNATION_SUBCMD_MODULE_CAPABILITIES;
+  byLen = 0;
+  int ret = SendFrameWithResponse(FUNC_ID_SERIAL_API_HOST_HIBERNATION, buffer, idx, buffer, &byLen);
+  if (ret != conFrameReceived)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_TRANSPORT;
+  }
+  /* Capabilities response: SubCmd | Max Important Devices Count | Max List Frame Length */
+  if (byLen < (IDX_DATA + 3) || buffer[IDX_DATA] != HOST_HIBERNATION_SUBCMD_MODULE_CAPABILITIES)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+  }
+
+  *max_devices = buffer[IDX_DATA + 1];
+  *max_frame_length = buffer[IDX_DATA + 2];
+
+  return SERIALAPI_HOST_HIBERNATION_OK;
+}
+
+int SerialAPI_RequestWakeupReport(void)
+{
+  /* acknowledged_frame — only transport ACK, no response data frame */
+  idx = 0;
+  buffer[idx++] = HOST_HIBERNATION_SUBCMD_REQUEST_WAKEUP_REPORT;
+  int ret = SendFrame(FUNC_ID_SERIAL_API_HOST_HIBERNATION, buffer, idx);
+  if (ret != conFrameSent)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_TRANSPORT;
+  }
+  return SERIALAPI_HOST_HIBERNATION_OK;
+}
+
+int SerialAPI_RequestS2MessageCountList(uint16_t node_id)
+{
+  idx = 0;
+  buffer[idx++] = HOST_HIBERNATION_SUBCMD_REQUEST_S2_MSG_COUNT_LIST;
+  buffer[idx++] = (uint8_t)(node_id >> 8);
+  buffer[idx++] = (uint8_t)(node_id & 0xFF);
+  byLen = 0;
+  int ret = SendFrameWithResponse(FUNC_ID_SERIAL_API_HOST_HIBERNATION, buffer, idx, buffer, &byLen);
+  if (ret != conFrameReceived)
+  {
+    return SERIALAPI_HOST_HIBERNATION_ERR_TRANSPORT;
+  }
+
+  /* S2 message count list response: SubCmd | Length | tuples | More to Follow
+   * buffer[] matches serBuf (no SOF): [0]=Len field, [1]=Type, [2]=Cmd (0xF0),
+   * [3]=SubCmd — same layout as other Host Hibernation SendFrameWithResponse paths. */
+  for (;;)
+  {
+    uint16_t resp_len = byLen;
+    if (buffer[IDX_DATA] != HOST_HIBERNATION_SUBCMD_REQUEST_S2_MSG_COUNT_LIST)
+    {
+      SER_PRINTF(
+          "RequestS2MessageCountList: wrong subcmd in response (len=0x%02x type=0x%02x cmd=0x%02x "
+          "data0=0x%02x, want subcmd=0x%02x)\n",
+          buffer[0], buffer[1], buffer[2], buffer[IDX_DATA],
+          HOST_HIBERNATION_SUBCMD_REQUEST_S2_MSG_COUNT_LIST);
+      return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+    }
+    if (resp_len < (uint16_t)(IDX_DATA + 2))
+    {
+      SER_PRINTF("RequestS2MessageCountList: response too short (len=%u)\n", resp_len);
+      return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+    }
+
+    uint8_t n_entries = buffer[IDX_DATA + 1];
+
+    /* n_entries == 0 and no MoreToFollow byte: NCP has no S2 nodes to report. */
+    if (n_entries == 0 && resp_len == (uint16_t)(IDX_DATA + 2))
+    {
+      return SERIALAPI_HOST_HIBERNATION_OK;
+    }
+
+    {
+      uint32_t need = (uint32_t)IDX_DATA + 2u + 4u * (uint32_t)n_entries + 1u;
+      if (need > (uint32_t)BUF_SIZE || need > (uint32_t)resp_len)
+      {
+        SER_PRINTF(
+            "RequestS2MessageCountList: length mismatch (n=%u, need=%u, len=%u)\n",
+            n_entries, (unsigned)need, resp_len);
+        return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+      }
+    }
+
+    /* Byte index into buffer: start of (NodeID,S2Count,LastSeq) tuples; after loop, MoreToFollow. */
+    uint16_t resp_byte_offset = (uint16_t)IDX_DATA + 2u;
+    for (uint8_t i = 0; i < n_entries; i++)
+    {
+      if ((uint32_t)resp_byte_offset + 4u > (uint32_t)resp_len)
+      {
+        SER_PRINTF("RequestS2MessageCountList: truncated entry list\n");
+        return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+      }
+      uint16_t nid = ((uint16_t)buffer[resp_byte_offset] << 8) | buffer[resp_byte_offset + 1];
+      uint8_t s2_count = buffer[resp_byte_offset + 2];
+      uint8_t last_seq = buffer[resp_byte_offset + 3];
+      if (callbacks != NULL && callbacks->OnNcpS2CountSync != NULL)
+      {
+        callbacks->OnNcpS2CountSync(nid, s2_count, last_seq);
+      }
+      resp_byte_offset += 4;
+    }
+
+    uint8_t more_to_follow = buffer[resp_byte_offset];
+    if (more_to_follow != 0x00 && more_to_follow != 0x01)
+    {
+      SER_PRINTF("RequestS2MessageCountList: invalid MoreToFollow=0x%02x\n",
+                 more_to_follow);
+      return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+    }
+    if (more_to_follow == 0x00)
+    {
+      return SERIALAPI_HOST_HIBERNATION_OK;
+    }
+
+    /* Wait for next RESPONSE (may skip unsolicited REQUEST frames). Same rules as
+     * SendFrameWithResponse: up to 3 receives; REQUEST is queued; RESPONSE must be 0xF0. */
+    {
+      int continuation_attempt;
+      for (continuation_attempt = 0; continuation_attempt < 3; continuation_attempt++)
+      {
+        ret = WaitResponse();
+        if (ret != conFrameReceived)
+        {
+          SER_PRINTF("RequestS2MessageCountList: WaitResponse failed (continuation)\n");
+          return SERIALAPI_HOST_HIBERNATION_ERR_TRANSPORT;
+        }
+        if (serBuf[1] == REQUEST)
+        {
+          QueueFrame();
+        }
+        else if (serBuf[IDX_CMD] != FUNC_ID_SERIAL_API_HOST_HIBERNATION)
+        {
+          SER_PRINTF(
+              "RequestS2MessageCountList: unexpected FUNC_ID 0x%02x (want 0xF0, continuation)\n",
+              serBuf[IDX_CMD]);
+        }
+        else
+        {
+          break;
+        }
+      }
+      if (continuation_attempt >= 3)
+      {
+        /* Got frames each time, but never a 0xF0 RESPONSE — protocol/sync, not raw RX failure. */
+        SER_PRINTF("RequestS2MessageCountList: no valid 0xF0 continuation after 3 receives\n");
+        return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
+      }
+    }
+    memcpy(buffer, serBuf, serFrameLen);
+    byLen = serFrameLen;
+  }
+  return SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE;
 }

@@ -9,6 +9,7 @@
 #include "ZW_ZIPApplication.h"
 
 #include "ZIP_Router.h" /* ApplicationCommandHandlerSerial */
+#include "CC_GatewayKeepAlive.h" /* OnNcpS2CountSync, OnDeviceLost */
 
 #include "Bridge.h"
 #include "security_layer.h"
@@ -38,7 +39,9 @@ ApplicationControllerUpdate(
 const struct SerialAPI_Callbacks serial_api_callbacks =
   { ApplicationCommandHandlerSerial, 0,
       ApplicationControllerUpdate, 0, 0, 0, 0,
-      ApplicationCommandHandlerSerial, SerialAPIStarted};
+      ApplicationCommandHandlerSerial, SerialAPIStarted,
+      gw_keepalive_on_ncp_s2_count_sync,
+      gw_keepalive_on_device_lost };
 
 struct chip_descriptor chip_desc = {CHIP_DESCRIPTOR_UNINITIALIZED, CHIP_DESCRIPTOR_UNINITIALIZED};
 

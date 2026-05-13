@@ -1,11 +1,16 @@
 /* © 2023 Silicon Laboratories Inc.  */
 #include <Serialapi.h>
+#include <ZW_SerialAPI.h>
+#include <ZW_classcmd_ex.h>
 #include <ZIP_Router_logging.h>
 #include <pthread.h>
 #include <pty.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <unity.h>
+
+#define MAX_S2_ROW_CALLBACKS 5
 
 #define CHECKSUM 0xFF
 #define TEST_ZW_VERSION                                                        \
@@ -49,6 +54,12 @@ typedef struct {
 
 static int end_device;
 static bool is_cb_called;
+static bool is_device_lost_called;
+static uint8_t device_lost_data[32];
+static uint16_t device_lost_data_len;
+
+static int s2_row_callback_count;
+static uint8_t s2_row_callback_entries[MAX_S2_ROW_CALLBACKS][4];
 
 static void TestApplicationCommandHandler(BYTE rxStatus, uint16_t destNode,
                                           uint16_t sourceNode,
@@ -69,6 +80,24 @@ static void TestSerialAPIStarted(BYTE *pData, BYTE pLen) {
   is_cb_called = TRUE;
 }
 
+static void TestOnDeviceLost(const uint8_t *payload, uint16_t payload_len) {
+  is_device_lost_called = TRUE;
+  device_lost_data_len = payload_len;
+  if (payload != NULL && payload_len > 0 && payload_len <= sizeof(device_lost_data))
+    memcpy(device_lost_data, payload, payload_len);
+}
+
+static void TestOnNcpS2CountSync(uint16_t node_id, uint8_t s2_count,
+                                 uint8_t last_seq) {
+  if (s2_row_callback_count < MAX_S2_ROW_CALLBACKS) {
+    uint8_t *e = s2_row_callback_entries[s2_row_callback_count++];
+    e[0] = (uint8_t)(node_id >> 8);
+    e[1] = (uint8_t)(node_id & 0xFF);
+    e[2] = s2_count;
+    e[3] = last_seq;
+  }
+}
+
 static const struct SerialAPI_Callbacks callbacks = {
     TestApplicationCommandHandler,
     0,
@@ -78,7 +107,10 @@ static const struct SerialAPI_Callbacks callbacks = {
     0,
     0,
     TestApplicationCommandHandler,
-    TestSerialAPIStarted};
+    TestSerialAPIStarted,
+    TestOnNcpS2CountSync,
+    TestOnDeviceLost
+};
 
 void apply_checksum(payload_t *payload) {
   uint8_t bChecksum = 0xFF;
@@ -126,7 +158,7 @@ uint8_t Device_SendFrame(session_t *session) {
 
   {
     fd_set rfds;
-    struct timeval tv = {.tv_usec = 1000};
+    struct timeval tv = {.tv_usec = 500};
 
     FD_ZERO(&rfds);
     FD_SET(end_device, &rfds);
@@ -207,6 +239,9 @@ void setUp(void) {
   int controller;
   pthread_t device_loop;
   is_cb_called = FALSE;
+  is_device_lost_called = FALSE;
+  device_lost_data_len = 0;
+  s2_row_callback_count = 0;
 
   if (openpty(&end_device, &controller, NULL, NULL, NULL)) {
     abort();
@@ -226,6 +261,13 @@ void setUp(void) {
   if (pthread_join(device_loop, NULL)) {
     abort();
   }
+
+  /* After SerialAPI_Init + Device_Init, clear callback capture: init can leave queued
+   * work or dispatch that sets is_cb_called; tests that expect FALSE must start clean. */
+  is_cb_called = FALSE;
+  is_device_lost_called = FALSE;
+  device_lost_data_len = 0;
+  s2_row_callback_count = 0;
 }
 
 void tearDown(void) {
@@ -547,4 +589,349 @@ void test_drops_insufficient_application_update_frame() {
   }
 
   TEST_LR_DISABLED(device_loop);
+}
+
+/* Host hibernation Serial API tests */
+
+static void *Device_HostHibClear(void *ptr)
+{
+  (void)ptr;
+  session_t session = {
+      .tx = {.data = {SOF, 0x05, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_CLEAR, 0x01, CHECKSUM},
+             .size = 0x07}, /* SOF + len(5) + type + cmd + data(2) + checksum */
+      .rx = {.size = 0x06}};
+  Device_ReceiveFrame(&session);
+  return NULL;
+}
+
+static void *Device_HostHibCapabilities(void *ptr)
+{
+  (void)ptr;
+  session_t session = {
+      .tx = {.data = {SOF, 0x06, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      HOST_HIBERNATION_SUBCMD_MODULE_CAPABILITIES, 0x20, 0x80, CHECKSUM},
+             .size = 0x08}, /* SOF + len(6) + type + cmd + data(3) + checksum */
+      .rx = {.size = 0x06}};
+  Device_ReceiveFrame(&session);
+  return NULL;
+}
+
+static void *Device_HostHibNotifyState(void *ptr)
+{
+  (void)ptr;
+  session_t session = {
+      .tx = {.data = {SOF, 0x06, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      HOST_HIBERNATION_SUBCMD_NOTIFY_HOST_STATE, 0x01, 0x00, CHECKSUM},
+             .size = 0x08},
+      .rx = {.size = 0x08}};
+  Device_ReceiveFrame(&session);
+  return NULL;
+}
+
+static void *Device_HostHibWakeupReport(void *ptr)
+{
+  (void)ptr;
+  session_t session = {.rx = {.size = 0x06}, .tx = {.size = 0}};
+  Device_ReceiveFrame(&session);
+  return NULL;
+}
+
+/* NCP rejects clear: command status 0x00 */
+static void *Device_HostHibClearReject(void *ptr)
+{
+  (void)ptr;
+  session_t session = {
+      .tx = {.data = {SOF, 0x05, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_CLEAR, 0x00, CHECKSUM},
+             .size = 0x07},
+      .rx = {.size = 0x06}};
+  Device_ReceiveFrame(&session);
+  return NULL;
+}
+
+/* Command status 0x01 — unknown node ID */
+static void *Device_HostHibImportantListUnknownNodeId(void *ptr)
+{
+  (void)ptr;
+  session_t list_session = {
+      .tx = {.data = {SOF, 0x06, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_LIST, 0x05, 0x01, CHECKSUM},
+             .size = 0x08},
+      .rx = {.size = 29}};
+  Device_ReceiveFrame(&list_session);
+  return NULL;
+}
+
+/* Response SubCmd byte wrong (not 0x03) */
+static void *Device_HostHibCapabilitiesBadSubcmd(void *ptr)
+{
+  (void)ptr;
+  session_t session = {
+      .tx = {.data = {SOF, 0x06, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      0xFF, 0x20, 0x80, CHECKSUM},
+             .size = 0x08},
+      .rx = {.size = 0x06}};
+  Device_ReceiveFrame(&session);
+  return NULL;
+}
+
+/* First S2 response has wrong SubCmd (not 0x06) */
+static void *Device_HostHibS2WrongSubcmd(void *ptr)
+{
+  (void)ptr;
+  session_t session = {
+      .tx = {.data = {SOF, 0x05, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      0xFF, 0x00, CHECKSUM},
+             .size = 0x07},
+      .rx = {.size = 0x08}};
+  Device_ReceiveFrame(&session);
+  return NULL;
+}
+
+static void *Device_HostHibImportantList(void *ptr)
+{
+  (void)ptr;
+  /* acknowledged_frame_with_response: SubCmd | Total Node Count | Command Status */
+  session_t list_session = {
+      .tx = {.data = {SOF, 0x06, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_LIST, 0x05, 0x00, CHECKSUM},
+             .size = 0x08}, /* SubCmd | TotalNodeCount(5) | CommandStatus(0x00=success); Length=6 => 8 bytes total */
+      .rx = {.size = 29}}; /* Request: payload 4+4*5=24, frame Length=26 => SOF+1+26+1=29 bytes */
+  Device_ReceiveFrame(&list_session);
+  return NULL;
+}
+
+static void *Device_HostHibS2MessageCount(void *ptr)
+{
+  (void)ptr;
+  /* Request: SubCmd=0x06 | NodeID(2). Response: SubCmd | Length(N) | (NodeID,S2Count,LastSeq)*N | MoreToFollow */
+  /* 5 entries: (5,2,3), (12,1,2), (3,0,1), (7,4,5), (15,3,4) */
+  session_t session = {
+      .tx = {.data = {SOF, 0x1A, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      HOST_HIBERNATION_SUBCMD_REQUEST_S2_MSG_COUNT_LIST, 0x05,
+                      0x00, 0x05, 0x02, 0x03,
+                      0x00, 0x0C, 0x01, 0x02,
+                      0x00, 0x03, 0x00, 0x01,
+                      0x00, 0x07, 0x04, 0x05,
+                      0x00, 0x0F, 0x03, 0x04,
+                      0x00, CHECKSUM},
+             .size = 0x1C}, /* len=26: subcmd+length(5)+5*4+more; total 28 bytes */
+      .rx = {.size = 0x08}}; /* Request: subcmd(1)+node_id(2)=3 bytes payload */
+  Device_ReceiveFrame(&session);
+  return NULL;
+}
+
+static void *Device_HostHibWakeNotifyDeviceLost(void *ptr)
+{
+  (void)ptr;
+  /* Device lost report (unsolicited): SubCmd | NodeCount | (NodeID, LastSeenMinutes)*N */
+  /* 5 entries: (5,30), (12,120), (3,30), (7,90), (15,45) */
+  session_t session = {
+      .tx = {.data = {SOF, 0x19, REQUEST, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
+                      HOST_HIBERNATION_SUBCMD_DEVICE_LOST_REPORT, 0x05,
+                      0x00, 0x05, 0x00, 0x1E,
+                      0x00, 0x0C, 0x00, 0x78,
+                      0x00, 0x03, 0x00, 0x1E,
+                      0x00, 0x07, 0x00, 0x5A,
+                      0x00, 0x0F, 0x00, 0x2D,
+                      CHECKSUM},
+             .size = 0x1B}, /* len=25: subcmd+count+5*4+checksum; total 27 bytes */
+      .rx = {.data = {0x00}, .size = 0x01}};
+  Device_SendFrame(&session);
+  return NULL;
+}
+
+void test_host_hib_send_important_devices_clear(void)
+{
+  pthread_t device_loop;
+  TEST_ASSERT_FALSE(pthread_create(&device_loop, NULL, Device_HostHibClear, NULL));
+  /* mock returns command status 0x01 (success) */
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_CLEAR_STATUS_SUCCESS_MIN,
+                        SerialAPI_SendImportantDevicesClear());
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+}
+
+void test_host_hib_get_module_capabilities(void)
+{
+  pthread_t device_loop;
+  BYTE max_devices = 0;
+  BYTE max_frame_length = 0;
+  TEST_ASSERT_FALSE(pthread_create(&device_loop, NULL, Device_HostHibCapabilities, NULL));
+  TEST_ASSERT_EQUAL_INT(
+      SERIALAPI_HOST_HIBERNATION_OK,
+      SerialAPI_GetModuleCapabilities(&max_devices, &max_frame_length));
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+  TEST_ASSERT_EQUAL(0x20, max_devices);
+  TEST_ASSERT_EQUAL(0x80, max_frame_length);
+}
+
+void test_host_hib_notify_host_state(void)
+{
+  pthread_t device_loop;
+  uint8_t ncp_severity = 0xFF;
+  TEST_ASSERT_FALSE(pthread_create(&device_loop, NULL, Device_HostHibNotifyState, NULL));
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_OK,
+                        SerialAPI_NotifyHostState(0x00, 0x00, &ncp_severity));
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+  TEST_ASSERT_EQUAL_HEX8(0x00, ncp_severity);
+}
+
+void test_host_hib_request_wakeup_report(void)
+{
+  pthread_t device_loop;
+  TEST_ASSERT_FALSE(pthread_create(&device_loop, NULL, Device_HostHibWakeupReport, NULL));
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_OK, SerialAPI_RequestWakeupReport());
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+}
+
+void test_host_hib_send_important_device_list(void)
+{
+  gw_important_node_entry_t list[5] = {
+      {.node_id = 5, .keep_alive_win_min = 60},
+      {.node_id = 12, .keep_alive_win_min = 120},
+      {.node_id = 3, .keep_alive_win_min = 30},
+      {.node_id = 7, .keep_alive_win_min = 90},
+      {.node_id = 15, .keep_alive_win_min = 45},
+  };
+
+  pthread_t device_loop;
+  TEST_ASSERT_FALSE(pthread_create(&device_loop, NULL, Device_HostHibImportantList, NULL));
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_OK,
+                        SerialAPI_SendImportantDeviceList(list, 5, 40));
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+}
+
+void test_host_hib_request_s2_message_count_list(void)
+{
+  static const uint8_t expected[MAX_S2_ROW_CALLBACKS][4] = {
+      {0x00, 0x05, 0x02, 0x03}, /* node_id=5, s2_count=2, last_seq=3 */
+      {0x00, 0x0C, 0x01, 0x02}, /* node_id=12, s2_count=1, last_seq=2 */
+      {0x00, 0x03, 0x00, 0x01}, /* node_id=3, s2_count=0, last_seq=1 */
+      {0x00, 0x07, 0x04, 0x05}, /* node_id=7, s2_count=4, last_seq=5 */
+      {0x00, 0x0F, 0x03, 0x04}, /* node_id=15, s2_count=3, last_seq=4 */
+  };
+
+  pthread_t device_loop;
+  TEST_ASSERT_FALSE(pthread_create(&device_loop, NULL, Device_HostHibS2MessageCount, NULL));
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_OK, SerialAPI_RequestS2MessageCountList(0));
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+  TEST_ASSERT_EQUAL(MAX_S2_ROW_CALLBACKS, s2_row_callback_count);
+  for (int i = 0; i < MAX_S2_ROW_CALLBACKS; i++) {
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(expected[i], s2_row_callback_entries[i], 4);
+  }
+}
+
+void test_host_hib_on_wake_notify_device_lost(void)
+{
+  static const uint8_t expected[20] = {
+      0x00, 0x05, 0x00, 0x1E, /* node_id=5, last_seen=30 */
+      0x00, 0x0C, 0x00, 0x78, /* node_id=12, last_seen=120 */
+      0x00, 0x03, 0x00, 0x1E, /* node_id=3, last_seen=30 */
+      0x00, 0x07, 0x00, 0x5A, /* node_id=7, last_seen=90 */
+      0x00, 0x0F, 0x00, 0x2D, /* node_id=15, last_seen=45 */
+  };
+
+  pthread_t device_loop;
+  bool got_frame = false;
+  TEST_ASSERT_FALSE(
+      pthread_create(&device_loop, NULL, Device_HostHibWakeNotifyDeviceLost, NULL));
+  /* Poll until frame received (SerialCheck has 1ms timeout; device may not have written yet) */
+  for (int i = 0; i < 100; i++) {
+    if (SerialAPI_Poll()) {
+      got_frame = true;
+      break;
+    }
+    usleep(1000);
+  }
+  TEST_ASSERT_TRUE(got_frame);
+  (void)SerialAPI_Poll();  /* Second call: dispatch queued frame to OnDeviceLost */
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+  TEST_ASSERT_TRUE(is_device_lost_called);
+  TEST_ASSERT_EQUAL(20, device_lost_data_len);
+  TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, device_lost_data, 20);
+}
+
+/* ---------- Host hibernation negative / validation tests ---------- */
+
+void test_host_hib_send_important_device_list_invalid_args(void)
+{
+  gw_important_node_entry_t one = {.node_id = 1, .keep_alive_win_min = 1};
+
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG,
+                        SerialAPI_SendImportantDeviceList(NULL, 1, 40));
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG,
+                        SerialAPI_SendImportantDeviceList(&one, 0, 40));
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG,
+                        SerialAPI_SendImportantDeviceList(&one, 1, 7));
+}
+
+void test_host_hib_notify_host_state_invalid_args(void)
+{
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG,
+                        SerialAPI_NotifyHostState(0xFF, 0x00, NULL));
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG,
+                        SerialAPI_NotifyHostState(0x02, 0x00, NULL));
+}
+
+void test_host_hib_get_module_capabilities_null_args(void)
+{
+  uint8_t a = 0;
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG,
+                        SerialAPI_GetModuleCapabilities(NULL, &a));
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG,
+                        SerialAPI_GetModuleCapabilities(&a, NULL));
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG,
+                        SerialAPI_GetModuleCapabilities(NULL, NULL));
+}
+
+void test_host_hib_clear_ncp_rejects_with_status_zero(void)
+{
+  pthread_t device_loop;
+  TEST_ASSERT_FALSE(pthread_create(&device_loop, NULL, Device_HostHibClearReject, NULL));
+  int r = SerialAPI_SendImportantDevicesClear();
+  TEST_ASSERT_EQUAL_INT(SERIALAPI_HOST_HIBERNATION_CLEAR_STATUS_NOT_ACCEPTED_OR_ERROR, r);
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+}
+
+void test_host_hib_send_important_device_list_ncp_unknown_nodeid(void)
+{
+  gw_important_node_entry_t list[5] = {
+      {.node_id = 5, .keep_alive_win_min = 60},
+      {.node_id = 12, .keep_alive_win_min = 120},
+      {.node_id = 3, .keep_alive_win_min = 30},
+      {.node_id = 7, .keep_alive_win_min = 90},
+      {.node_id = 15, .keep_alive_win_min = 45},
+  };
+
+  pthread_t device_loop;
+  TEST_ASSERT_FALSE(
+      pthread_create(&device_loop, NULL, Device_HostHibImportantListUnknownNodeId, NULL));
+  TEST_ASSERT_EQUAL_INT(
+      SERIALAPI_HOST_HIBERNATION_LIST_STATUS_UNKNOWN_NODEID,
+      SerialAPI_SendImportantDeviceList(list, 5, 40));
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+}
+
+void test_host_hib_get_module_capabilities_bad_response_subcmd(void)
+{
+  pthread_t device_loop;
+  uint8_t max_d = 0;
+  uint8_t max_f = 0;
+  TEST_ASSERT_FALSE(
+      pthread_create(&device_loop, NULL, Device_HostHibCapabilitiesBadSubcmd, NULL));
+  TEST_ASSERT_EQUAL_INT(
+      SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE,
+      SerialAPI_GetModuleCapabilities(&max_d, &max_f));
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+}
+
+void test_host_hib_request_s2_message_count_list_bad_response_subcmd(void)
+{
+  pthread_t device_loop;
+  TEST_ASSERT_FALSE(pthread_create(&device_loop, NULL, Device_HostHibS2WrongSubcmd, NULL));
+  TEST_ASSERT_EQUAL_INT(
+      SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE,
+      SerialAPI_RequestS2MessageCountList(0));
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
 }
