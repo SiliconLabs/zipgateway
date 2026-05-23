@@ -146,7 +146,7 @@ endif()
 
 MESSAGE(STATUS "VERSION_SHORT: " ${VERSION_SHORT})
 
-option(DISABLE_DTLS "Disable DTLS and TLS" OFF)
+option(DISABLE_DTLS "Disable DTLS and TLS" ON)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/files/zipgateway.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/files/zipgateway)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/files/zgw_import.sh.in ${CMAKE_CURRENT_BINARY_DIR}/files/zgw_import.sh @ONLY)
