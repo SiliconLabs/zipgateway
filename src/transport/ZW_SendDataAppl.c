@@ -429,8 +429,17 @@ send_endpoint(ts_param_t* p, const u8_t* data, u16_t len, ZW_SendDataAppl_Callba
   security_scheme_t scheme;
   static u8_t new_buf[UIP_BUFSIZE]; //Todo we should have some max frame size
 
-  if ((len >= 1) && (data != 0)
-      && (data[0] == COMMAND_CLASS_WAKE_ON_CRITICAL_MESSAGE)) {
+  if (data == NULL || len == 0)
+  {
+    return FALSE;
+  }
+
+  /* Only the WOCM Notify itself must be sent without security; the
+   * Configuration Set/Get/Report sub-commands are normal CC commands and
+   * MUST follow the negotiated security scheme (S2 / S0 as applicable). */
+  if (len >= 2
+      && data[0] == COMMAND_CLASS_WAKE_ON_CRITICAL_MESSAGE
+      && data[1] == WAKE_ON_CRITICAL_MESSAGE_NOTIFY) {
     p->scheme = NO_SCHEME;
   }
 

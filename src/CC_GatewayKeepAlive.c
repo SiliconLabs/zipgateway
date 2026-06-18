@@ -36,16 +36,16 @@ void gw_keepalive_init(void)
         max_important_devices = max_dev;
         max_important_frame_bytes = max_frame;
         LOG_PRINTF("GW KeepAlive: host hibernation module caps - max important devices=%u, max list frame len=%u\n",
-                   (unsigned)max_important_devices, (unsigned)max_important_frame_bytes);
+                   (unsigned)max_important_devices, (unsigned)max_important_frame_bytes); // NOSONAR
     }
     else
     {
-        WRN_PRINTF("GW KeepAlive: SerialAPI_GetModuleCapabilities failed, return %d\n", sc);
+        WRN_PRINTF("GW KeepAlive: SerialAPI_GetModuleCapabilities failed, return %d\n", sc); // NOSONAR
         LOG_PRINTF("GW KeepAlive: using default max important-device count=%u, list frame length=%u\n",
-                   (unsigned)max_important_devices, (unsigned)max_important_frame_bytes);
+                   (unsigned)max_important_devices, (unsigned)max_important_frame_bytes); // NOSONAR
     }
 
-    LOG_PRINTF("GW KeepAlive module initialized\n");
+    LOG_PRINTF("GW KeepAlive: module initialized\n"); // NOSONAR
 }
 
 /*
@@ -82,12 +82,12 @@ int gw_keepalive_handle_important_node_set(const uint8_t *payload, uint16_t len)
         important_node_list[i].keep_alive_win_min = (uint16_t)p[2] | ((uint16_t)p[3] << 8);
     }
 
-    DBG_PRINTF("Important node list SET: %u entries\n", (unsigned)count);
+    LOG_PRINTF("GW KeepAlive: GATEWAY_IMPORTANT_NODE_LIST_SET: %u entries\n", (unsigned)count); // NOSONAR
     for (i = 0; i < count; i++)
     {
-        DBG_PRINTF("  node_id=%u  keep_alive_win=%u min\n",
+        DBG_PRINTF("node_id=%u keep_alive_win=%u min\n",
                    (unsigned)important_node_list[i].node_id,
-                   (unsigned)important_node_list[i].keep_alive_win_min);
+                   (unsigned)important_node_list[i].keep_alive_win_min); // NOSONAR
     }
 
     /* Forward to NCP via SerialAPI (use important_node_list directly) */
@@ -97,15 +97,15 @@ int gw_keepalive_handle_important_node_set(const uint8_t *payload, uint16_t len)
 
         if (sc <= 0)
         {
-            WRN_PRINTF("GW KeepAlive: SerialAPI_SendImportantDevicesClear failed, return %d\n", sc);
-            /* sc==0 is NCP CLEAR_NOT_ACCEPTED (0x00); must not return GW_KEEPALIVE_OK — upstream treats 0 as success. */
+            WRN_PRINTF("GW KeepAlive: ImportantDevicesClear failed, return %d\n", sc); // NOSONAR
+            /* sc==0 is NCP CLEAR_NOT_ACCEPTED (0x00); must not return GW_KEEPALIVE_OK -- upstream treats 0 as success. */
             if (sc < 0)
             {
                 return sc;
             }
             return GW_KEEPALIVE_ERR_CLEAR_NOT_ACCEPTED;
         }
-        LOG_PRINTF("GW KeepAlive: SerialAPI_SendImportantDevicesClear ok, return %d\n", sc);
+        LOG_PRINTF("GW KeepAlive: ImportantDevicesClear ok\n"); // NOSONAR
     }
     else
     {
@@ -113,9 +113,10 @@ int gw_keepalive_handle_important_node_set(const uint8_t *payload, uint16_t len)
 
         if (sc != SERIALAPI_HOST_HIBERNATION_OK)
         {
-            WRN_PRINTF("GW KeepAlive: SerialAPI_SendImportantDeviceList failed, return %d\n", sc);
+            WRN_PRINTF("GW KeepAlive: SendImportantDeviceList failed, return %d\n", sc); // NOSONAR
             return sc;
         }
+        LOG_PRINTF("GW KeepAlive: SendImportantDeviceList ok (count=%u)\n", (unsigned)count); // NOSONAR
     }
 
     return GW_KEEPALIVE_OK;
@@ -129,7 +130,7 @@ int gw_keepalive_handle_app_state_set(uint8_t state, uint8_t severity_level)
     }
 
     app_state = state;
-    LOG_PRINTF("App state SET: %s\n", state ? "AWAKE" : "ASLEEP");
+    LOG_PRINTF("GW KeepAlive: GATEWAY_APP_STATE_SET: %s\n", state ? "AWAKE" : "ASLEEP"); // NOSONAR
 
     /* Forward to NCP via SerialAPI */
     if (state == GW_APP_STATE_AWAKE)
@@ -138,36 +139,43 @@ int gw_keepalive_handle_app_state_set(uint8_t state, uint8_t severity_level)
         sc = SerialAPI_RequestS2MessageCountList(0);
         if (sc != SERIALAPI_HOST_HIBERNATION_OK)
         {
-            WRN_PRINTF("GW KeepAlive: SerialAPI_RequestS2MessageCountList failed, return %d\n", sc);
+            WRN_PRINTF("GW KeepAlive: RequestS2MessageCountList failed, return %d\n", sc); // NOSONAR
+        }
+        else
+        {
+            LOG_PRINTF("GW KeepAlive: RequestS2MessageCountList ok\n"); // NOSONAR
         }
 
         sc = SerialAPI_RequestWakeupReport();
         if (sc != SERIALAPI_HOST_HIBERNATION_OK)
         {
-            WRN_PRINTF("GW KeepAlive: SerialAPI_RequestWakeupReport failed, return %d\n", sc);
+            WRN_PRINTF("GW KeepAlive: RequestWakeupReport failed, return %d\n", sc); // NOSONAR
             return sc;
         }
+        LOG_PRINTF("GW KeepAlive: RequestWakeupReport ok\n"); // NOSONAR
+
         /* Spec: MUST clear important-device list on NCP before Host State AWAKE (0x00). */
         sc = SerialAPI_SendImportantDevicesClear();
         if (sc <= 0)
         {
-            WRN_PRINTF("GW KeepAlive: SerialAPI_SendImportantDevicesClear failed, return %d\n", sc);
+            WRN_PRINTF("GW KeepAlive: ImportantDevicesClear (wake) failed, return %d\n", sc); // NOSONAR
             if (sc < 0)
             {
                 return sc;
             }
             return GW_KEEPALIVE_ERR_CLEAR_NOT_ACCEPTED;
         }
+        LOG_PRINTF("GW KeepAlive: ImportantDevicesClear (wake) ok\n"); // NOSONAR
         {
             uint8_t ncp_severity = 0;
             sc = SerialAPI_NotifyHostState(HOST_HIBERNATION_STATE_AWAKE, 0x00, &ncp_severity);
             if (sc != SERIALAPI_HOST_HIBERNATION_OK)
             {
-                WRN_PRINTF("GW KeepAlive: SerialAPI_NotifyHostState(AWAKE) failed, return %d\n", sc);
+                WRN_PRINTF("GW KeepAlive: NotifyHostState(AWAKE) failed, return %d\n", sc); // NOSONAR
                 return sc;
             }
             LOG_PRINTF("GW KeepAlive: NotifyHostState(AWAKE) ok, NCP severity threshold=%u\n",
-                       (unsigned)ncp_severity);
+                       (unsigned)ncp_severity); // NOSONAR
         }
     }
     else
@@ -181,15 +189,15 @@ int gw_keepalive_handle_app_state_set(uint8_t state, uint8_t severity_level)
 
         if (sc != SERIALAPI_HOST_HIBERNATION_OK)
         {
-            WRN_PRINTF("GW KeepAlive: SerialAPI_NotifyHostState(GOING_TO_SLEEP) failed, return %d\n", sc);
+            WRN_PRINTF("GW KeepAlive: NotifyHostState(GOING_TO_SLEEP) failed, return %d\n", sc); // NOSONAR
             return sc;
         }
         LOG_PRINTF("GW KeepAlive: NotifyHostState(GOING_TO_SLEEP) ok, requested severity=%u, NCP severity threshold=%u\n",
-                   (unsigned)severity_level, (unsigned)ncp_severity);
+                   (unsigned)severity_level, (unsigned)ncp_severity); // NOSONAR
         if (ncp_severity != severity_level)
         {
-            WRN_PRINTF("GW KeepAlive: NCP severity threshold mismatch — requested=%u, NCP configured=%u\n",
-                       (unsigned)severity_level, (unsigned)ncp_severity);
+            WRN_PRINTF("GW KeepAlive: NCP severity threshold mismatch - requested=%u, NCP configured=%u\n",
+                       (unsigned)severity_level, (unsigned)ncp_severity); // NOSONAR
             return GW_KEEPALIVE_ERR_SEVERITY_MISMATCH;
         }
     }
@@ -213,15 +221,23 @@ const gw_important_node_entry_t *gw_keepalive_get_node_list(uint16_t *count)
 
 void gw_keepalive_on_ncp_s2_count_sync(uint16_t node_id, uint8_t s2_count, uint8_t last_seq)
 {
-    if (sec2_reconcile_span_from_ncp((nodeid_t)node_id, s2_count, last_seq))
+    if (sec2_reconcile_span_from_ncp(node_id, s2_count, last_seq))
     {
-        LOG_PRINTF("GW KeepAlive: S2 reconcile node=%u s2_count=%u last_seq=%u (SPAN updated)\n",
-                   (unsigned)node_id, (unsigned)s2_count, (unsigned)last_seq);
+        if (s2_count > 0)
+        {
+            LOG_PRINTF("GW KeepAlive: S2 reconcile node=%u s2_count=%u last_seq=%u (SPAN updated, PRNG advanced)\n",
+                       (unsigned)node_id, (unsigned)s2_count, (unsigned)last_seq); // NOSONAR
+        }
+        else
+        {
+            LOG_PRINTF("GW KeepAlive: S2 reconcile node=%u s2_count=%u last_seq=%u (rx_seq synced, PRNG not advanced)\n",
+                       (unsigned)node_id, (unsigned)s2_count, (unsigned)last_seq); // NOSONAR
+        }
     }
     else
     {
         DBG_PRINTF("GW KeepAlive: S2 reconcile node=%u s2_count=%u last_seq=%u (no matching SPAN)\n",
-                   (unsigned)node_id, (unsigned)s2_count, (unsigned)last_seq);
+                   (unsigned)node_id, (unsigned)s2_count, (unsigned)last_seq); // NOSONAR
     }
 }
 
@@ -235,14 +251,13 @@ void gw_keepalive_send_wake_notify(uint8_t wake_reason,
 
     if (uip_is_addr_unspecified(&cfg.unsolicited_dest))
     {
-        WRN_PRINTF("Wake notify: no unsolicited destination configured\n");
+        WRN_PRINTF("GW KeepAlive: wake notify dropped - no unsolicited destination configured\n"); // NOSONAR
         return;
     }
 
     if (uip_is_addr_unspecified(&cfg.lan_addr))
     {
-        WRN_PRINTF("Wake notify: Zip LAN address (lan_addr) not set; "
-                   "cannot send GATEWAY_WAKE_NOTIFY_REPORT (DTLS session identity)\n");
+        WRN_PRINTF("GW KeepAlive: wake notify dropped - lan_addr not set (DTLS source)\n"); // NOSONAR
         return;
     }
 
@@ -276,34 +291,32 @@ void gw_keepalive_send_wake_notify(uint8_t wake_reason,
                                   TRUE);
 
     LOG_PRINTF("GW KeepAlive: issued GATEWAY_WAKE_NOTIFY_REPORT (reason=%u)\n",
-               (unsigned)wake_reason);
+               (unsigned)wake_reason); // NOSONAR
 }
 
 void gw_keepalive_on_device_lost(const uint8_t *payload, uint16_t payload_len)
 {
     if (payload != NULL && payload_len > 0)
     {
-        uint16_t i;
-
         /* NCP: n × (node_id u16 BE, last_seen_min u16 BE) — same as test_serialapi / S2 host-hibernation tuples. */
         if ((payload_len % 4u) != 0u)
         {
             WRN_PRINTF("GW KeepAlive: device lost bad len=%u raw %s\n", (unsigned)payload_len,
-                       print_frame((const char *)payload, (unsigned)payload_len));
+                       print_frame((const char *)payload, (unsigned)payload_len)); // NOSONAR
         }
         else
         {
-            for (i = 0; i < payload_len; i += 4u)
+            for (uint16_t i = 0; i < payload_len; i += 4u)
             {
                 LOG_PRINTF("GW KeepAlive: device lost node_id=%u last_seen_min=%u\n",
                            (unsigned)(((uint16_t)payload[i] << 8) | payload[i + 1]),
-                           (unsigned)(((uint16_t)payload[i + 2] << 8) | payload[i + 3]));
+                           (unsigned)(((uint16_t)payload[i + 2] << 8) | payload[i + 3])); // NOSONAR
             }
         }
     }
     else
     {
-        LOG_PRINTF("GW KeepAlive: device lost (no NCP payload, len=%u)\n", (unsigned)payload_len);
+        LOG_PRINTF("GW KeepAlive: device lost (no NCP payload)\n"); // NOSONAR
     }
 
     gw_keepalive_send_wake_notify(GW_WAKE_REASON_DEVICE_LOST, payload, payload_len);

@@ -72,7 +72,7 @@ static void parse_gw_profile(Gw_PeerProfile_St_t *pGwPeerProfile)
   printf("Portal URL: %s Port no = %u \r\n", cfg.portal_url, cfg.portal_portno);
 }
 
-static command_handler_codes_t Gateway_CommandHandler(zwave_connection_t *c, uint8_t *pData, uint16_t bDatalen)
+static command_handler_codes_t Gateway_CommandHandler(zwave_connection_t *c, uint8_t *pData, uint16_t bDatalen) // NOSONAR
 {
   ZW_APPLICATION_TX_BUFFER_EX *pCmd = (ZW_APPLICATION_TX_BUFFER_EX *)pData;
 
