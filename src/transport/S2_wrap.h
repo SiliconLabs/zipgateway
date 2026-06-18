@@ -116,4 +116,19 @@ void sec2_unpersist_span_table();
  * @param node: Destination node id to match to reset the SPANs
  */
 void sec2_reset_span(nodeid_t node);
+
+/**
+ * After host wake-up: align SPAN rx_seq and optionally catch up the receiver PRNG.
+ *
+ * For each negotiated SPAN matching @p remote_node and this node as lnode:
+ * if @p last_seq differs from stored rx_seq and @p s2_count > 0, advances the SPAN
+ * PRNG by @p s2_count steps (NCP-reported S2 message count from the post-wake list).
+ * Always sets rx_seq to @p last_seq for that entry.
+ *
+ * @param remote_node: Peer node id (rnode)
+ * @param s2_count:    NCP S2 message count byte for this node (PRNG step count when seq advanced)
+ * @param last_seq:    NCP-reported last S2 sequence for this node
+ * @return 1 if a matching SPAN row was found and updated, else 0
+ */
+uint8_t sec2_reconcile_span_from_ncp(nodeid_t remote_node, uint8_t s2_count, uint8_t last_seq);
 #endif /* SRC_TRANSPORT_S2_WRAP_H_ */

@@ -323,8 +323,22 @@ typedef enum
 #define FUNC_ID_SERIAL_API_POWER_MANAGEMENT             0xEE
 #define FUNC_ID_SERIAL_API_READY                        0xEF
 
-/* Allocated for proprietary serial API commands */
-#define FUNC_ID_PROPRIETARY_0                           0xF0
+/* Host hibernation extension: Serial API command 0xF0 + sub-command byte */
+#define FUNC_ID_SERIAL_API_HOST_HIBERNATION             0xF0
+#define HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_LIST  0x00
+#define HOST_HIBERNATION_SUBCMD_IMPORTANT_DEVICES_CLEAR 0x01
+#define HOST_HIBERNATION_SUBCMD_NOTIFY_HOST_STATE       0x02
+#define HOST_HIBERNATION_SUBCMD_MODULE_CAPABILITIES     0x03
+#define HOST_HIBERNATION_SUBCMD_REQUEST_WAKEUP_REPORT   0x04
+#define HOST_HIBERNATION_SUBCMD_DEVICE_LOST_REPORT      0x05
+#define HOST_HIBERNATION_SUBCMD_REQUEST_S2_MSG_COUNT_LIST 0x06
+/* Notify host state payload */
+#define HOST_HIBERNATION_STATE_AWAKE                    0x00
+#define HOST_HIBERNATION_STATE_GOING_TO_SLEEP           0x01
+
+/* Allocated for proprietary serial API commands.
+ * 0xF0 is used by FUNC_ID_SERIAL_API_HOST_HIBERNATION (Host Hibernation). */
+/* #define FUNC_ID_PROPRIETARY_0                        0xF0 -- see FUNC_ID_SERIAL_API_HOST_HIBERNATION */
 #define FUNC_ID_PROPRIETARY_1                           0xF1
 #define FUNC_ID_PROPRIETARY_2                           0xF2
 #define FUNC_ID_PROPRIETARY_3                           0xF3

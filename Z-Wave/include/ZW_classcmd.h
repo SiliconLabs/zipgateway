@@ -2473,6 +2473,7 @@
 #define COMMAND_CLASS_FIRMWARE_UPDATE_MD_V3                                              0x7A
 #define COMMAND_CLASS_FIRMWARE_UPDATE_MD_V4                                              0x7A
 #define COMMAND_CLASS_GEOGRAPHIC_LOCATION                                                0x8C
+#define COMMAND_CLASS_WAKE_ON_CRITICAL_MESSAGE                                           0x8D
 #define COMMAND_CLASS_GROUPING_NAME                                                      0x7B /*DEPRECATED*/
 #define COMMAND_CLASS_HAIL                                                               0x82 /*DEPRECATED*/
 #define COMMAND_CLASS_HRV_CONTROL                                                        0x39
@@ -3794,6 +3795,13 @@
 #define GEOGRAPHIC_LOCATION_SET_LEVEL_LONG_SIGN_BIT_MASK                                 0x80
 #define GEOGRAPHIC_LOCATION_SET_LEVEL2_LATITUDE_MINUTES_MASK                             0x7F
 #define GEOGRAPHIC_LOCATION_SET_LEVEL2_LAT_SIGN_BIT_MASK                                 0x80
+
+/* Wake On Critical Message command class commands */
+#define WAKE_ON_CRITICAL_MESSAGE_VERSION                                                 0x01
+#define WAKE_ON_CRITICAL_MESSAGE_CONFIGURATION_SET                                       0x01
+#define WAKE_ON_CRITICAL_MESSAGE_CONFIGURATION_GET                                       0x02
+#define WAKE_ON_CRITICAL_MESSAGE_CONFIGURATION_REPORT                                    0x03
+#define WAKE_ON_CRITICAL_MESSAGE_NOTIFY                                                  0x04
 
 /* Grouping Name command class commands */
 #define GROUPING_NAME_VERSION                                                            0x01

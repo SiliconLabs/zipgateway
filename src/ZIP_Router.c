@@ -51,6 +51,7 @@
 #include "etimer.h"
 
 #include "CC_Gateway.h"
+#include "CC_GatewayKeepAlive.h"
 #include "lib/rand.h"
 
 #include "ClassicZIPNode.h"
@@ -421,6 +422,70 @@ ApplicationCommandHandlerZIP(ts_param_t *p, ZW_APPLICATION_TX_BUFFER *pCmd,
   }
   switch (pCmd->ZW_Common.cmdClass)
   {
+    case COMMAND_CLASS_WAKE_ON_CRITICAL_MESSAGE:
+      /* Wake On Critical Message MUST NOT be encapsulated by any other CC
+       * and MUST be the OUTERMOST layer (outside S0/S2/Transport Service).
+       * All handling for 0x8D is centralised here to keep the spec exception
+       * in one place. */
+      if (pCmd->ZW_Common.cmd == WAKE_ON_CRITICAL_MESSAGE_NOTIFY) {
+        /* Layout (after cmdClass+cmd):
+         *   byte 0: bits 3..0 = severity, bits 7..4 = reserved
+         *   byte 1: payload length (N)
+         *   byte 2..2+N-1: encapsulated frame */
+        if (cmdLength < 4) {
+          WRN_PRINTF("WOCM Notify too short (%u)\n", (unsigned)cmdLength);
+          return;
+        }
+        uint8_t *body = (uint8_t *)pCmd + 2;
+        uint8_t severity = body[0] & 0x0F;
+        uint8_t inner_len = body[1];
+        if (cmdLength < (WORD)(4 + inner_len)) {
+          WRN_PRINTF("WOCM Notify length mismatch (declared %u, frame %u)\n",
+                     inner_len, (unsigned)cmdLength);
+          return;
+        }
+        {
+          uint8_t opt[3];
+          opt[0] = (uint8_t)((p->snode >> 8) & 0xFF);
+          opt[1] = (uint8_t)(p->snode & 0xFF);
+          opt[2] = severity & 0x0F;
+          gw_keepalive_send_wake_notify(GW_WAKE_REASON_CRITICAL_MESSAGE, opt,
+                                        sizeof(opt));
+        }
+        DBG_PRINTF("WOCM Notify unwrapped, severity=%u, inner_len=%u\n",
+                   severity, inner_len);
+        if (inner_len == 0) {
+          /* "Wake-only" notification, no inner frame to dispatch. */
+          return;
+        }
+        ApplicationCommandHandlerZIP(p,
+            (ZW_APPLICATION_TX_BUFFER *)&body[2], inner_len);
+        return;
+      } else {
+        /* Configuration Set/Get/Report: forward directly to the unsolicited
+         * destination. We bypass ApplicationIpCommandHandler /
+         * rd_check_security_for_unsolicited_dest because the generic
+         * security gate there requires frames from S2 nodes to be received
+         * on S2, which by spec is forbidden for WOCM. */
+        zwave_connection_t c;
+        memset(&c, 0, sizeof(c));
+        ipOfNode(&c.ripaddr, p->snode);
+        ipOfNode(&c.lipaddr, p->dnode);
+        c.scheme = p->scheme;
+        c.rendpoint = p->sendpoint;
+        c.lendpoint = p->dendpoint;
+        c.rx_flags = p->rx_flags;
+        if (!uip_is_addr_unspecified(&cfg.unsolicited_dest)) {
+          ClassicZIPNode_SendUnsolicited(&c, pCmd, cmdLength,
+              &cfg.unsolicited_dest, UIP_HTONS(cfg.unsolicited_port),
+              (c.rx_flags & RECEIVE_STATUS_TYPE_MASK) == RECEIVE_STATUS_TYPE_SINGLE);
+        }
+        if (!uip_is_addr_unspecified(&cfg.unsolicited_dest2)) {
+          ClassicZIPNode_SendUnsolicited(&c, pCmd, cmdLength,
+              &cfg.unsolicited_dest2, UIP_HTONS(cfg.unsolicited_port2), FALSE);
+        }
+        return;
+      }
     case COMMAND_CLASS_CONTROLLER_REPLICATION:
       ZW_ReplicationReceiveComplete();
     break;

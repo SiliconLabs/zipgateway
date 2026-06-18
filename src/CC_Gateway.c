@@ -1,6 +1,7 @@
 /* © 2014 Silicon Laboratories Inc.
  */
 #include "CC_Gateway.h"
+#include "CC_GatewayKeepAlive.h"
 #include "DataStore.h"
 #include "ZW_classcmd.h"
 #include "ZW_classcmd_ex.h"
@@ -11,8 +12,13 @@
 #include "ZW_udp_server.h"
 #include "Serialapi.h"
 #include "ZW_ZIPApplication.h"
+#include "ClassicZIPNode.h"
 #include "command_handler.h"
+#include "ZIP_Router_logging.h"
+#include "zw_network_info.h"
+#include "zip_router_ipv6_utils.h"
 #include <stdlib.h>
+#include <string.h>
 
 static u8_t tunnelTimer = 0xFF;
 
@@ -377,6 +383,53 @@ static command_handler_codes_t Gateway_CommandHandler(zwave_connection_t *c, uin
     ZW_SendDataZIP(c, (u8_t *)pNodeAppInfo_Report, len, NULL);
   }
 
+  break;
+
+  case GATEWAY_IMPORTANT_NODE_LIST_SET:
+  {
+    uint8_t report[3];
+    int rc;
+
+    if (bDatalen < 4)
+    {
+      printf("GATEWAY_IMPORTANT_NODE_LIST_SET: payload too short (%u)\r\n", bDatalen);
+      report[0] = COMMAND_CLASS_ZIP_GATEWAY;
+      report[1] = GATEWAY_IMPORTANT_NODE_LIST_REPORT;
+      report[2] = 0xFF;
+      ZW_SendDataZIP(c, report, sizeof(report), NULL);
+      break;
+    }
+
+    rc = gw_keepalive_handle_important_node_set(pData + 2, bDatalen - 2);
+    report[0] = COMMAND_CLASS_ZIP_GATEWAY;
+    report[1] = GATEWAY_IMPORTANT_NODE_LIST_REPORT;
+    report[2] = (rc == 0) ? 0x00 : 0xFF;
+    ZW_SendDataZIP(c, report, sizeof(report), NULL);
+  }
+  break;
+
+  case GATEWAY_APP_STATE_SET:
+  {
+    uint8_t report[3];
+    int rc;
+
+    if (bDatalen < 3)
+    {
+      printf("GATEWAY_APP_STATE_SET: payload too short (%u)\r\n", bDatalen);
+      report[0] = COMMAND_CLASS_ZIP_GATEWAY;
+      report[1] = GATEWAY_APP_STATE_REPORT;
+      report[2] = 0xFF;
+      ZW_SendDataZIP(c, report, sizeof(report), NULL);
+      break;
+    }
+
+    rc = gw_keepalive_handle_app_state_set(pData[2],
+             (bDatalen >= 4) ? pData[3] : 0x00);
+    report[0] = COMMAND_CLASS_ZIP_GATEWAY;
+    report[1] = GATEWAY_APP_STATE_REPORT;
+    report[2] = (rc == 0) ? 0x00 : 0xFF;
+    ZW_SendDataZIP(c, report, sizeof(report), NULL);
+  }
   break;
 
   default:

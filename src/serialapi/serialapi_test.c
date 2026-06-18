@@ -164,6 +164,10 @@ const struct SerialAPI_Callbacks serial_api_callbacks = {
 	0,
 	0,
 	0,
+	0,
+	0,
+	0,
+	0,
 };
 
 #ifdef _MSC_VER

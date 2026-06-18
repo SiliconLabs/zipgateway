@@ -14940,6 +14940,26 @@
         <variant paramoffs="255" sizemask="0x00" />
       </param>
     </cmd>
+    <cmd key="0x13" name="GATEWAY_IMPORTANT_NODE_LIST_SET" help="Gateway Important Node List Set" support_mode="RX">
+      <param key="0x00" name="Payload" type="VARIANT">
+        <variant paramoffs="255" sizemask="0x00" />
+      </param>
+    </cmd>
+    <cmd key="0x14" name="GATEWAY_IMPORTANT_NODE_LIST_REPORT" help="Gateway Important Node List Report" support_mode="TX">
+      <param key="0x00" name="Status" type="BYTE" />
+    </cmd>
+    <cmd key="0x15" name="GATEWAY_APP_STATE_SET" help="Gateway App State Set" support_mode="RX">
+      <param key="0x00" name="State" type="BYTE" />
+    </cmd>
+    <cmd key="0x16" name="GATEWAY_APP_STATE_REPORT" help="Gateway App State Report" support_mode="TX">
+      <param key="0x00" name="Status" type="BYTE" />
+    </cmd>
+    <cmd key="0x17" name="GATEWAY_WAKE_NOTIFY_REPORT" help="Gateway Wake Notify Report" support_mode="TX">
+      <param key="0x00" name="Wake Reason" type="BYTE" />
+      <param key="0x01" name="Optional Data" type="VARIANT">
+        <variant paramoffs="255" sizemask="0x00" />
+      </param>
+    </cmd>
   </cmd_class>
   <cmd_class key="0x61" version="1" name="COMMAND_CLASS_ZIP_PORTAL" help="Command Class Z/IP Portal">
     <cmd key="0x01" name="GATEWAY_CONFIGURATION_SET" help="Gateway Configuration Set" support_mode="RX">

@@ -415,7 +415,7 @@ dtls_session_timer_adjust()
 
     min = min - clock_seconds();
 
-    DBG_PRINTF("Next timeout is in %i seconds\n", min);
+    DBG_PRINTF("Next timeout is in %ld seconds\n", min);
     if(min<=0) {
       etimer_set(&timer, 50);
     }else {

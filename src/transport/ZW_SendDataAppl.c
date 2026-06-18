@@ -418,6 +418,11 @@ send_endpoint(ts_param_t* p, const u8_t* data, u16_t len, ZW_SendDataAppl_Callba
   security_scheme_t scheme;
   static u8_t new_buf[UIP_BUFSIZE]; //Todo we should have some max frame size
 
+  if ((len >= 1) && (data != 0)
+      && (data[0] == COMMAND_CLASS_WAKE_ON_CRITICAL_MESSAGE)) {
+    p->scheme = NO_SCHEME;
+  }
+
   new_len = len;
 
   if (len > sizeof(new_buf))
