@@ -78,16 +78,16 @@ int __wrap_SerialAPI_RequestWakeupReport(void)
   return SERIALAPI_HOST_HIBERNATION_OK;
 }
 
-void __wrap_ClassicZIPNode_SendUnsolicited(void *conn, void *buf, uint8_t len,
-                                           void *dest, uint16_t port, int flag)
+void __wrap_ClassicZIPNode_SendUnsolicited(const void *conn, const void *buf, uint8_t len,
+                                           const void *dest, uint16_t port, int flag)
 {
   (void)conn;
   (void)dest;
   (void)port;
   (void)flag;
   classic_zip_send_unsolicited_called++;
-  classic_zip_send_len = (len < sizeof(classic_zip_send_buf)) ? len : sizeof(classic_zip_send_buf);
-  memcpy(classic_zip_send_buf, buf, classic_zip_send_len);
+  classic_zip_send_len = len;
+  memcpy(classic_zip_send_buf, buf, len);
 }
 
 static void reset_mocks(void)
@@ -163,7 +163,6 @@ void test_gw_keepalive_handle_important_node_set_one_entry(void)
 
 void test_gw_keepalive_handle_important_node_set_five_entries(void)
 {
-  /* count=5, 5 entries: (5,60), (12,120), (3,30), (7,90), (15,45) - LSB first */
   uint8_t payload[] = {
       0x05, 0x00,                           /* count=5 */
       0x05, 0x00, 0x3C, 0x00,              /* node_id=5, keep_alive=60 */

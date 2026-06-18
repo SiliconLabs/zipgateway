@@ -7,6 +7,7 @@
 #include <pty.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <unity.h>
 
@@ -158,12 +159,13 @@ uint8_t Device_SendFrame(session_t *session) {
 
   {
     fd_set rfds;
-    struct timeval tv = {.tv_usec = 500};
+    struct timeval ack_timeout = {.tv_usec = 500};
 
     FD_ZERO(&rfds);
     FD_SET(end_device, &rfds);
 
-    int data_ready = select(end_device + 1, &rfds, NULL, NULL, &tv);
+    int data_ready =
+        select(end_device + 1, &rfds, NULL, NULL, &ack_timeout);
     if (-1 == data_ready) {
       abort();
     } else if (0 == data_ready) {
@@ -185,7 +187,9 @@ uint8_t Device_SendFrame(session_t *session) {
   return TRUE;
 }
 
-static void *Device_Init(void *ptr) {
+static void *Device_Init(void *ptr) /* NOSONAR: pthread start routine signature */
+{
+  (void)ptr;
   uint8_t rx_ack = ACK;
   const uint8_t tx_ack = ACK;
   session_t sessions[4] = {
@@ -216,9 +220,12 @@ static void *Device_Init(void *ptr) {
   }
 
   DBG_PRINTF("Device_Init succeeded\n");
+  return NULL;
 }
 
-static void *Device_ToggleLR(void *ptr) {
+static void *Device_ToggleLR(void *ptr) /* NOSONAR: pthread start routine signature */
+{
+  (void)ptr;
   session_t sessions[2] = {
       {.tx = {.data = {SOF, 0x4, RESPONSE, FUNC_ID_SERIALAPI_SETUP, 0x01,
                        CHECKSUM},
@@ -229,10 +236,13 @@ static void *Device_ToggleLR(void *ptr) {
   for (int i = 0; i < 2; i++) {
     Device_ReceiveFrame(&sessions[i]);
   }
+  return NULL;
 }
 
-static void *Device_StartRoutine(void *ptr) {
+static void *Device_StartRoutine(void *ptr) /* NOSONAR: pthread start routine signature */
+{
   Device_SendFrame((session_t *)ptr);
+  return NULL;
 }
 
 void setUp(void) {
@@ -499,9 +509,12 @@ void test_detects_bof_serialapi_started_frame() {
 void test_drops_insufficient_zw_add_node_to_network_frame() {
   void cbFuncZWAddNodeToNetwork(LEARN_INFO * ptr) { is_cb_called = true; }
 
-  void *Device_AddNodeToNetwork(void *ptr) {
+  void *Device_AddNodeToNetwork(void *ptr) /* NOSONAR: pthread start routine signature */
+  {
+    (void)ptr;
     session_t session = {.rx = {.size = 0x07}};
     Device_ReceiveFrame(&session);
+    return NULL;
   }
 
   pthread_t device_loop;
@@ -533,9 +546,12 @@ void test_drops_insufficient_zw_add_node_to_network_frame() {
 void test_drops_insufficient_zw_set_learn_mode_frame() {
   void cbFuncZWSetLearnMode(LEARN_INFO * ptr) { is_cb_called = true; }
 
-  void *Device_SetLearnMode(void *ptr) {
+  void *Device_SetLearnMode(void *ptr) /* NOSONAR: pthread start routine signature */
+  {
+    (void)ptr;
     session_t session = {.rx = {.size = 0x07}};
     Device_ReceiveFrame(&session);
+    return NULL;
   }
 
   pthread_t device_loop;
@@ -593,7 +609,7 @@ void test_drops_insufficient_application_update_frame() {
 
 /* Host hibernation Serial API tests */
 
-static void *Device_HostHibClear(void *ptr)
+static void *Device_HostHibClear(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
   session_t session = {
@@ -605,7 +621,7 @@ static void *Device_HostHibClear(void *ptr)
   return NULL;
 }
 
-static void *Device_HostHibCapabilities(void *ptr)
+static void *Device_HostHibCapabilities(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
   session_t session = {
@@ -617,7 +633,7 @@ static void *Device_HostHibCapabilities(void *ptr)
   return NULL;
 }
 
-static void *Device_HostHibNotifyState(void *ptr)
+static void *Device_HostHibNotifyState(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
   session_t session = {
@@ -629,7 +645,7 @@ static void *Device_HostHibNotifyState(void *ptr)
   return NULL;
 }
 
-static void *Device_HostHibWakeupReport(void *ptr)
+static void *Device_HostHibWakeupReport(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
   session_t session = {.rx = {.size = 0x06}, .tx = {.size = 0}};
@@ -638,7 +654,7 @@ static void *Device_HostHibWakeupReport(void *ptr)
 }
 
 /* NCP rejects clear: command status 0x00 */
-static void *Device_HostHibClearReject(void *ptr)
+static void *Device_HostHibClearReject(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
   session_t session = {
@@ -651,7 +667,7 @@ static void *Device_HostHibClearReject(void *ptr)
 }
 
 /* Command status 0x01 — unknown node ID */
-static void *Device_HostHibImportantListUnknownNodeId(void *ptr)
+static void *Device_HostHibImportantListUnknownNodeId(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
   session_t list_session = {
@@ -664,7 +680,7 @@ static void *Device_HostHibImportantListUnknownNodeId(void *ptr)
 }
 
 /* Response SubCmd byte wrong (not 0x03) */
-static void *Device_HostHibCapabilitiesBadSubcmd(void *ptr)
+static void *Device_HostHibCapabilitiesBadSubcmd(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
   session_t session = {
@@ -677,7 +693,7 @@ static void *Device_HostHibCapabilitiesBadSubcmd(void *ptr)
 }
 
 /* First S2 response has wrong SubCmd (not 0x06) */
-static void *Device_HostHibS2WrongSubcmd(void *ptr)
+static void *Device_HostHibS2WrongSubcmd(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
   session_t session = {
@@ -689,7 +705,7 @@ static void *Device_HostHibS2WrongSubcmd(void *ptr)
   return NULL;
 }
 
-static void *Device_HostHibImportantList(void *ptr)
+static void *Device_HostHibImportantList(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
   /* acknowledged_frame_with_response: SubCmd | Total Node Count | Command Status */
@@ -702,11 +718,9 @@ static void *Device_HostHibImportantList(void *ptr)
   return NULL;
 }
 
-static void *Device_HostHibS2MessageCount(void *ptr)
+static void *Device_HostHibS2MessageCount(void *ptr) /* NOSONAR: pthread start routine signature */
 {
   (void)ptr;
-  /* Request: SubCmd=0x06 | NodeID(2). Response: SubCmd | Length(N) | (NodeID,S2Count,LastSeq)*N | MoreToFollow */
-  /* 5 entries: (5,2,3), (12,1,2), (3,0,1), (7,4,5), (15,3,4) */
   session_t session = {
       .tx = {.data = {SOF, 0x1A, RESPONSE, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
                       HOST_HIBERNATION_SUBCMD_REQUEST_S2_MSG_COUNT_LIST, 0x05,
@@ -722,11 +736,8 @@ static void *Device_HostHibS2MessageCount(void *ptr)
   return NULL;
 }
 
-static void *Device_HostHibWakeNotifyDeviceLost(void *ptr)
+static void *Device_HostHibWakeNotifyDeviceLost(void *ptr) /* NOSONAR: pthread start routine signature */
 {
-  (void)ptr;
-  /* Device lost report (unsolicited): SubCmd | NodeCount | (NodeID, LastSeenMinutes)*N */
-  /* 5 entries: (5,30), (12,120), (3,30), (7,90), (15,45) */
   session_t session = {
       .tx = {.data = {SOF, 0x19, REQUEST, FUNC_ID_SERIAL_API_HOST_HIBERNATION,
                       HOST_HIBERNATION_SUBCMD_DEVICE_LOST_REPORT, 0x05,
@@ -842,7 +853,8 @@ void test_host_hib_on_wake_notify_device_lost(void)
       got_frame = true;
       break;
     }
-    usleep(1000);
+    struct timespec delay = {.tv_sec = 0, .tv_nsec = 1000 * 1000L};
+    (void)nanosleep(&delay, NULL);
   }
   TEST_ASSERT_TRUE(got_frame);
   (void)SerialAPI_Poll();  /* Second call: dispatch queued frame to OnDeviceLost */
