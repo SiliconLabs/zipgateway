@@ -22,7 +22,9 @@ const struct SerialAPI_Callbacks callbacks =
       0,
       0,
       0, //ApplicationCommandHandlerSerial,
-      0 //SerialAPIStarted
+      0, //SerialAPIStarted,
+      0, //OnNcpS2CountSync
+      0  //OnDeviceLost
   };
 
 

@@ -30,7 +30,7 @@ typedef struct SerialAPICapbilities {
 } SerialAPICapabilities_t;
 
 
-const struct SerialAPI_Callbacks serial_api_callbacks = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+const struct SerialAPI_Callbacks serial_api_callbacks = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 
 // Displays an help message when the programmer was called with wrong/no arguments

@@ -30,6 +30,7 @@
 #include "Mailbox.h"
 #include "CommandAnalyzer.h"
 #include "s2_protocol.h"
+#include "nextnonce.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include "ZIP_Router_logging.h"
@@ -877,6 +878,51 @@ void sec2_reset_span(nodeid_t node)
     }
   }
 }
+
+uint8_t sec2_reconcile_span_from_ncp(nodeid_t remote_node, uint8_t s2_count, uint8_t last_seq)
+{
+  size_t i;
+  uint8_t updated = 0;
+
+  if (!s2_ctx)
+    return 0;
+
+  for (i = 0; i < SPAN_TABLE_SIZE; i++) {
+    if (s2_ctx->span_table[i].state != SPAN_NEGOTIATED)
+      continue;
+    if (s2_ctx->span_table[i].rnode != remote_node)
+      continue;
+    if (s2_ctx->span_table[i].lnode != MyNodeID)
+      continue;
+
+    if (last_seq != s2_ctx->span_table[i].rx_seq && s2_count > 0) {
+      /* Advance receiver PRNG: NCP s2_count is how many S2 frames to account for;
+       * each step matches one next_nonce_generate the sender used for encrypt
+       * (we discard the generated nonces here). */
+      uint8_t nonce_buf[16];
+      uint8_t j;
+      for (j = 0; j < s2_count; j++) {
+        next_nonce_generate(&s2_ctx->span_table[i].d.rng, nonce_buf);
+      }
+      DBG_PRINTF("sec2_reconcile_span_from_ncp: rnode=%u PRNG advanced %u steps "
+                 "(rx_seq %u -> last_seq %u)\n",
+                 (unsigned)remote_node, (unsigned)s2_count,
+                 (unsigned)s2_ctx->span_table[i].rx_seq,
+                 (unsigned)last_seq);
+    } else if (last_seq != s2_ctx->span_table[i].rx_seq) {
+      DBG_PRINTF("sec2_reconcile_span_from_ncp: rnode=%u rx_seq mismatch "
+                 "(rx_seq %u -> last_seq %u) but s2_count=0, skipping PRNG advance\n",
+                 (unsigned)remote_node,
+                 (unsigned)s2_ctx->span_table[i].rx_seq,
+                 (unsigned)last_seq);
+    }
+
+    s2_ctx->span_table[i].rx_seq = last_seq;
+    updated = 1;
+  }
+  return updated;
+}
+
 void sec2_unpersist_span_table()
 {
   if(s2_ctx) {

@@ -1,0 +1,2 @@
+add_unity_test(NAME test_CC_GatewayKeepAlive FILES test_CC_GatewayKeepAlive.c ../zipgateway_main_stubs.c LIBRARIES zipgateway-lib)
+set_target_properties(test_CC_GatewayKeepAlive PROPERTIES LINK_FLAGS "-Wl,-wrap=SerialAPI_GetModuleCapabilities -Wl,-wrap=SerialAPI_SendImportantDevicesClear -Wl,-wrap=SerialAPI_SendImportantDeviceList -Wl,-wrap=SerialAPI_NotifyHostState -Wl,-wrap=SerialAPI_RequestS2MessageCountList -Wl,-wrap=SerialAPI_RequestWakeupReport -Wl,-wrap=ClassicZIPNode_SendUnsolicited")

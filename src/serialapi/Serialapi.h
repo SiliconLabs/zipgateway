@@ -39,6 +39,8 @@ struct SerialAPI_Callbacks {
   void (*ApplicationTestPoll)(void); /*TODO Remove this callback*/
   void (*ApplicationCommandHandler_Bridge)(BYTE  rxStatus,uint16_t destNode, uint16_t sourceNode, ZW_APPLICATION_TX_BUFFER *pCmd, BYTE cmdLength);
   void (*SerialAPIStarted)(BYTE *pData, BYTE pLen);
+  void (*OnNcpS2CountSync)(uint16_t node_id, uint8_t s2_count, uint8_t last_seq);
+  void (*OnDeviceLost)(const uint8_t *payload, uint16_t payload_len);
 #if 0
   void (*ApplicationSlaveCommandHandler)(BYTE rxStatus, BYTE destNode, BYTE sourceNode, ZW_APPLICATION_TX_BUFFER *pCmd, BYTE cmdLength);
 #endif
@@ -298,5 +300,118 @@ bool SerialAPI_DisableLR();
  * @return false fail
  */
 bool ZW_SoftResetWithCheck(void);
+
+/*
+ * Host hibernation extension — return convention (int):
+ *   SERIALAPI_HOST_HIBERNATION_ERR_*   — host-side failure (must stay negative)
+ *   SERIALAPI_HOST_HIBERNATION_OK (0)  — success where no separate NCP status is returned
+ *   Otherwise             — NCP wire codes below (non-negative; see macros in this block)
+ *
+ * If new host-side ERR_* values are added, keep them in the range -1 .. -255 so they stay
+ * distinct from Z/IP gateway GW_KEEPALIVE_ERR_* in CC_GatewayKeepAlive.h (-256 .. -258).
+ *
+ * Allocation today: -1 .. -3 below. Next new code should be -4, then -5, etc. (still ≥ -255).
+ */
+ #define SERIALAPI_HOST_HIBERNATION_OK                                    0
+ #define SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG                       (-1)
+ #define SERIALAPI_HOST_HIBERNATION_ERR_TRANSPORT                         (-2)
+ #define SERIALAPI_HOST_HIBERNATION_ERR_BAD_RESPONSE                      (-3)
+ 
+ /* Important Devices List — NCP command status (returned by SerialAPI_SendImportantDeviceList on failure) */
+ #define SERIALAPI_HOST_HIBERNATION_LIST_STATUS_SUCCESS                   0x00u
+ #define SERIALAPI_HOST_HIBERNATION_LIST_STATUS_UNKNOWN_NODEID            0x01u
+ #define SERIALAPI_HOST_HIBERNATION_LIST_STATUS_DUPLICATE_NODEID          0x02u
+ #define SERIALAPI_HOST_HIBERNATION_LIST_STATUS_NOT_ENOUGH_NODES_FRAGMENT 0x03u
+ #define SERIALAPI_HOST_HIBERNATION_LIST_STATUS_WRONG_FRAME_INDEX         0x04u
+ #define SERIALAPI_HOST_HIBERNATION_LIST_STATUS_WRONG_TOTAL_FRAMES        0x05u
+ 
+ /* Important Devices Clear — NCP command status byte */
+ #define SERIALAPI_HOST_HIBERNATION_CLEAR_STATUS_NOT_ACCEPTED_OR_ERROR    0x00u
+ #define SERIALAPI_HOST_HIBERNATION_CLEAR_STATUS_SUCCESS_MIN              0x01u /* 0x01..0xFF: accepted on wire */
+ 
+/*
+ * Host hibernation (Serial API FUNC_ID_SERIAL_API_HOST_HIBERNATION, 0xF0 +
+ *     sub-command).
+ * @return Summary: SERIALAPI_HOST_HIBERNATION_ERR_* on host failure; otherwise
+ *     SERIALAPI_HOST_HIBERNATION_OK and/or NCP codes — see SERIALAPI_HOST_HIBERNATION_*
+ *     macros at top of header.
+ */
+
+/*
+ * @brief Push the important-device list to the NCP, splitting into multiple
+ *     frames when needed.
+ * @param entries
+ *     Node list payload (gateway-defined; typically node id + keep-alive window
+ *     per entry).
+ * @param count Number of entries.
+ * @param max_frame_length
+ *     Maximum host-hibernation payload length per frame (usually from module
+ *     capabilities). Must be 8..BUF_SIZE or the call fails with
+ *     SERIALAPI_HOST_HIBERNATION_ERR_INVALID_ARG.
+ * @return
+ *   - SERIALAPI_HOST_HIBERNATION_OK: all frames accepted (same value as
+ *     SERIALAPI_HOST_HIBERNATION_LIST_STATUS_SUCCESS).
+ *   - SERIALAPI_HOST_HIBERNATION_LIST_STATUS_* (0x01..0x05): first NCP command
+ *     status if a frame is rejected.
+ *   - SERIALAPI_HOST_HIBERNATION_ERR_*: transport, bad response, or invalid
+ *     argument on the host.
+ */
+int SerialAPI_SendImportantDeviceList(const void *entries, uint16_t count,
+    uint8_t max_frame_length);
+
+/*
+ * @brief Clear the important-device list stored on the NCP.
+ * @return
+ *   - SERIALAPI_HOST_HIBERNATION_CLEAR_STATUS_NOT_ACCEPTED_OR_ERROR: NCP did not
+ *     accept the clear.
+ *   - SERIALAPI_HOST_HIBERNATION_CLEAR_STATUS_SUCCESS_MIN..0xFF: clear accepted.
+ *   - SERIALAPI_HOST_HIBERNATION_ERR_*: host could not complete the exchange.
+ */
+int SerialAPI_SendImportantDevicesClear(void);
+
+/*
+ * @brief Tell the NCP whether the host is awake or about to sleep.
+ * @param host_state
+ *     Host state on wire (0x00 = awake, 0x01 = going to sleep). After sleep,
+ *     clear the important-device list before reporting awake again.
+ * @param severity_level
+ *     Minimum severity of frames needed to wake the host. Ignored by NCP when
+ *     host_state is not 0x01 (going to sleep).
+ * @param ncp_severity_level
+ *     If non-NULL, filled with the NCP's configured severity threshold from
+ *     the response frame.
+ * @return SERIALAPI_HOST_HIBERNATION_OK on success, or
+ *     SERIALAPI_HOST_HIBERNATION_ERR_* on failure.
+ */
+int SerialAPI_NotifyHostState(uint8_t host_state, uint8_t severity_level,
+    uint8_t *ncp_severity_level);
+
+/*
+ * @brief Ask the NCP to send a wakeup report (transport-level acknowledged
+ *     request only).
+ * @return SERIALAPI_HOST_HIBERNATION_OK, or SERIALAPI_HOST_HIBERNATION_ERR_*.
+ */
+int SerialAPI_RequestWakeupReport(void);
+
+/*
+ * @brief Read important-device list limits: max devices and max list frame length
+ *     supported by the module.
+ * @param max_devices
+ *     Filled with the NCP maximum important-device count (non-NULL).
+ * @param max_frame_length
+ *     Filled with the NCP maximum list payload length for list frames (non-NULL).
+ * @return SERIALAPI_HOST_HIBERNATION_OK with outputs set, or
+ *     SERIALAPI_HOST_HIBERNATION_ERR_*.
+ */
+int SerialAPI_GetModuleCapabilities(uint8_t *max_devices, uint8_t *max_frame_length);
+
+/*
+ * @brief Request S2 message count information; use node id 0 to query all nodes.
+ *     Delivers data via OnNcpS2CountSync and may use multiple responses.
+ * @param node_id Target node, or 0 for all.
+ * @return SERIALAPI_HOST_HIBERNATION_OK when the exchange completes, or
+ *     SERIALAPI_HOST_HIBERNATION_ERR_* (counts arrive only through the callback).
+ */
+int SerialAPI_RequestS2MessageCountList(uint16_t node_id);
 
 #endif /* SERIAL_API_H_ */

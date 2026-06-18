@@ -55,6 +55,8 @@ add_subdirectory( zwlog )
 
 add_subdirectory(CC_Indicator)
 
+add_subdirectory(CC_GatewayKeepAlive)
+
 add_subdirectory(CC_Time)
 
 add_subdirectory(multicast_group_manager)

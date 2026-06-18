@@ -1223,4 +1223,42 @@ typedef struct _ZW_EXTENDED_NODE_ADD_STATUS_1BYTE_FRAME_
 #define STATUS_SOFT_RESET_OK            0x0
 #define STATUS_SOFT_RESET_FAIL          0xFF
 
+
+/************************************************************/
+/* Gateway Keep-Alive / Important Node / App State commands  */
+/* (COMMAND_CLASS_ZIP_GATEWAY = 0x5F)                        */
+/************************************************************/
+#ifndef GATEWAY_IMPORTANT_NODE_LIST_SET
+#define GATEWAY_IMPORTANT_NODE_LIST_SET                  0x13
+#endif
+#ifndef GATEWAY_IMPORTANT_NODE_LIST_REPORT
+#define GATEWAY_IMPORTANT_NODE_LIST_REPORT               0x14
+#endif
+#ifndef GATEWAY_APP_STATE_SET
+#define GATEWAY_APP_STATE_SET                            0x15
+#endif
+#ifndef GATEWAY_APP_STATE_REPORT
+#define GATEWAY_APP_STATE_REPORT                         0x16
+#endif
+#define GATEWAY_WAKE_NOTIFY_REPORT                       0x17
+
+#define GW_APP_STATE_ASLEEP                              0
+#define GW_APP_STATE_AWAKE                               1
+
+#define GW_WAKE_REASON_URGENT_NODE                       0x01
+#define GW_WAKE_REASON_DEVICE_LOST                       0x02
+#define GW_WAKE_REASON_CRITICAL_MESSAGE                  0x03
+
+#define GW_IMPORTANT_NODE_MAX_ENTRIES                    (128u)
+#define GW_IMPORTANT_LIST_FRAME_BYTES                    (40u)
+
+#define GW_ZW_APPLICATION_CMD_BYTE_MAX                   (255u)
+#define GW_WAKE_NOTIFY_REPORT_HEADER_BYTES               (6u)
+#define GW_WAKE_NOTIFY_REPORT_OPT_DATA_MAX               (249u)
+
+typedef struct _gw_important_node_entry_ {
+    uint16_t    node_id;
+    uint16_t    keep_alive_win_min;
+} CC_ALIGN_PACK gw_important_node_entry_t;
+
 #endif /* ZW_CLASSCMD_EX_H_ */
