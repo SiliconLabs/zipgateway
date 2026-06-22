@@ -784,7 +784,8 @@ ZW_GetNodeIDMaskList(
 BYTE /*RET: TRUE if success or FALSE*/
 ZW_SetListenBeforeTalkThreshold(
   BYTE bChannel,                  /*IN: RF channel to set the threshold for */
-  BYTE bThreshold);               /*IN: Threshold to be added to RSSI limit */
+  int8_t bThreshold);             /*IN: Signed dBm CCA threshold (700/800);
+                                       legacy 34-78 index on 500-series */
 
 /**
  * Return Version on supplied Command Class if supported by protocol.
