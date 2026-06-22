@@ -10,8 +10,9 @@
 #define CHECKSUM 0xFF
 #define TEST_ZW_VERSION                                                        \
   0x7A, 0x65, 0x65, 0x77, 0x61, 0x76, 0x65, 0x72, 0x6F, 0x63, 0x6B, 0x73
+/* Among others, support Set LBT Threshold, that is byte 7, bit 3 set (0x0F)  */
 #define SUPPORTED_CMDS                                                         \
-  0xFF, 0x05, 0xFF, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0xFF, 0x0a, 0x0b,      \
+  0xFF, 0x05, 0xFF, 0x03, 0x04, 0x05, 0x06, 0x0F, 0x08, 0xFF, 0x0a, 0x0b,      \
       0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0xFF,  \
       0x18, 0x19, 0x1a, 0x1b, 0x1c
 #define SUPPORTED_API_CMDS                                                     \
@@ -520,6 +521,39 @@ void test_drops_insufficient_zw_set_learn_mode_frame() {
   TEST_ASSERT_FALSE(session.is_timeout);
   TEST_ASSERT_EQUAL(ACK, session.rx.data[0]);
   TEST_ASSERT_FALSE(is_cb_called);
+}
+
+void test_set_listen_before_talk_threshold_signed_dbm() {
+  void *Device_SetLBT(void *ptr) {
+    Device_ReceiveFrame((session_t *)ptr);
+    return NULL;
+  }
+
+  pthread_t device_loop;
+
+  /* Request frame on the wire:
+   * SOF, LEN, REQUEST, FUNC_ID, bChannel, bThreshold, CHECKSUM (7 bytes).
+   * Response frame: RES | FUNC_ID | TRUE. */
+  session_t session = {
+      .rx = {.size = 0x07},
+      .tx = {.data = {SOF, 0x04, RESPONSE,
+                      FUNC_ID_ZW_SET_LISTEN_BEFORE_TALK_THRESHOLD, TRUE,
+                      CHECKSUM},
+             .size = 0x06}};
+
+  TEST_ASSERT_FALSE(
+      pthread_create(&device_loop, NULL, Device_SetLBT, &session));
+
+  /* -65 dBm must reach the wire as 0xBF, not be mangled by an unsigned type. */
+  uint8_t ret = ZW_SetListenBeforeTalkThreshold(0, (int8_t)-65);
+
+  TEST_ASSERT_FALSE(pthread_join(device_loop, NULL));
+
+  TEST_ASSERT_EQUAL_HEX8(FUNC_ID_ZW_SET_LISTEN_BEFORE_TALK_THRESHOLD,
+                         session.rx.data[3]);
+  TEST_ASSERT_EQUAL_HEX8(0x00, session.rx.data[4]);
+  TEST_ASSERT_EQUAL_HEX8(0xBF, session.rx.data[5]);
+  TEST_ASSERT_EQUAL(TRUE, ret);
 }
 
 void test_drops_insufficient_application_update_frame() {
