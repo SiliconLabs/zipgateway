@@ -77,6 +77,20 @@ bool zgw_idle(void);
  */
 BYTE isClassicZWAddr(uip_ip6addr_t* ip);
 
+/** Resolve the LBT threshold wire byte for a given chip type.
+ *
+ * The ZWLBT byte has a different meaning per chip generation: signed dBm on
+ * 700/800-series (as per specification) and the legacy unsigned 34-78 index
+ * on 500-series.
+ *
+ * \param chip_type Chip type as reported by the Serial API.
+ * \param value     Configured ZWLBT value (signed dBm for Gecko, 34-78 for 500).
+ * \param out_byte  Receives the byte to send when the value is valid.
+ * \return true and sets *out_byte when valid for the chip; false to skip the
+ *         override (leaving the chip's regulatory region default in place).
+ */
+bool zip_lbt_resolve_threshold(uint8_t chip_type, int value, uint8_t *out_byte);
+
 /* TODO: Move ? */
 #ifdef __ASIX_C51__
 void Reset_Gateway(void) CC_REENTRANT_ARG;

@@ -302,10 +302,20 @@ struct router_config {
 
   /** Configuration parameter ZWLBT in zipgateway.cfg.
    *
-   *  sets the LBT Threshold anytime ZIPGW resets the Z-Wave chip. 
+   *  Sets the LBT Threshold anytime ZIPGW resets the Z-Wave chip.
    *  ZW_SetListenBeforeTalkThreshold()
+   *
+   *  Signed value: dBm on 700/800-series, legacy 34-78 index on 500-series.
+   *  Only applied when is_zw_lbt_set is non-zero (ZWLBT present in the config).
    */
-  uint8_t zw_lbt;
+  int zw_lbt;
+
+  /** Mark if ZWLBT was explicitly set in zipgateway.cfg.
+   *
+   *  When unset, the gateway leaves the chip's regulatory region default in
+   *  place instead of overriding the LBT threshold.
+   */
+  int is_zw_lbt_set;
 
   /** Configuration parameter single_classic_temp_association in zipgateway.cfg
    *

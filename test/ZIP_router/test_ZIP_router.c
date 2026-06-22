@@ -131,6 +131,55 @@ void test_ApplicationCommandHandlerZIP_WUN()
   TEST_ASSERT_EQUAL(mb_wakeup_event_args.node,0);
 }
 
+void test_zip_lbt_resolve_threshold()
+{
+  uint8_t wire = 0xAA;
+
+  /* 700/800 (Gecko): ZWLBT is signed dBm. */
+  wire = 0xAA;
+  TEST_ASSERT_TRUE(zip_lbt_resolve_threshold(7, -65, &wire));
+  TEST_ASSERT_EQUAL_HEX8(0xBF, wire);
+
+  wire = 0xAA;
+  TEST_ASSERT_TRUE(zip_lbt_resolve_threshold(8, -80, &wire));
+  TEST_ASSERT_EQUAL_HEX8(0xB0, wire);
+
+  /* Positive/out-of-range on Gecko is rejected (would defeat LBT). */
+  wire = 0xAA;
+  TEST_ASSERT_FALSE(zip_lbt_resolve_threshold(7, 64, &wire));
+  TEST_ASSERT_EQUAL_HEX8(0xAA, wire);
+
+  wire = 0xAA;
+  TEST_ASSERT_FALSE(zip_lbt_resolve_threshold(7, 0, &wire));
+  TEST_ASSERT_EQUAL_HEX8(0xAA, wire);
+
+  wire = 0xAA;
+  TEST_ASSERT_FALSE(zip_lbt_resolve_threshold(7, -129, &wire));
+  TEST_ASSERT_EQUAL_HEX8(0xAA, wire);
+
+  /* 500-series: ZWLBT keeps the legacy 34-78 unsigned encoding. */
+  wire = 0xAA;
+  TEST_ASSERT_TRUE(zip_lbt_resolve_threshold(5, 64, &wire));
+  TEST_ASSERT_EQUAL_HEX8(64, wire);
+
+  wire = 0xAA;
+  TEST_ASSERT_TRUE(zip_lbt_resolve_threshold(5, 50, &wire));
+  TEST_ASSERT_EQUAL_HEX8(50, wire);
+
+  wire = 0xAA;
+  TEST_ASSERT_FALSE(zip_lbt_resolve_threshold(5, 33, &wire));
+  TEST_ASSERT_EQUAL_HEX8(0xAA, wire);
+
+  wire = 0xAA;
+  TEST_ASSERT_FALSE(zip_lbt_resolve_threshold(5, 79, &wire));
+  TEST_ASSERT_EQUAL_HEX8(0xAA, wire);
+
+  /* Unknown chip type: skip the override entirely. */
+  wire = 0xAA;
+  TEST_ASSERT_FALSE(zip_lbt_resolve_threshold(0, -65, &wire));
+  TEST_ASSERT_EQUAL_HEX8(0xAA, wire);
+}
+
 static void test_is_linklayer_addr_zero()
 {
   uip_lladdr_t uip_lladdr; /* Mocked from uip6.c */
