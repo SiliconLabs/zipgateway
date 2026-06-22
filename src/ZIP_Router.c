@@ -953,6 +953,72 @@ ipv6_init()
 
 }
 
+bool zip_lbt_resolve_threshold(uint8_t chip_type, int value, uint8_t *out_byte)
+{
+  if (ZW_GECKO_CHIP_TYPE(chip_type)) {
+    /* SAPI specification, Release 1.9.0, S4.8.7:
+     * RSSI enconding values are signed dBm -128.. -1, 0..124.
+     *
+     * 700/800-series: A non-negative threshold sits above any real RSSI and
+     * would defeat LBT, so reject it. */
+
+    if ((value < -128) || (value >= 0)) {
+      return false;
+    }
+    *out_byte = (uint8_t)(int8_t)value;
+    return true;
+  }
+
+  if (chip_type == ZW_CHIP_TYPE) {
+    /* 500-series: legacy unsigned 34-78 index encoding. */
+    if ((value < 34) || (value > 78)) {
+      return false;
+    }
+    *out_byte = (uint8_t)value;
+    return true;
+  }
+
+  return false;
+}
+
+bool zip_lbt_configure_threshold(uint8_t chip_type, uint8_t rfregion,
+                                 int is_zw_lbt_set, int zw_lbt)
+{
+  uint8_t channel_idx, max_idx, lbt_threshold;
+
+  if (!is_zw_lbt_set) {
+    WRN_PRINTF("ZWLBT is not configured; keeping the thresholds of the module unchanged\n");
+    return TRUE;
+  }
+
+  if (!zip_lbt_resolve_threshold(chip_type, zw_lbt, &lbt_threshold)) {
+    WRN_PRINTF("Ignoring invalid ZWLBT value %d for chip type %d; keeping "
+               "module values\n", zw_lbt, chip_type);
+    return TRUE;
+  }
+
+  if ((rfregion == JP) || (rfregion == KR)) {
+    max_idx = 3;
+  } else {
+    max_idx = 2;
+  }
+
+  LOG_PRINTF("Applying ZWLBT value %d for chip type %d across %u channel%s\n",
+             zw_lbt, chip_type, max_idx, (max_idx == 1) ? "" : "s");
+
+  for (channel_idx = 0; channel_idx < max_idx; channel_idx++) {
+    if(!ZW_SetListenBeforeTalkThreshold(channel_idx, lbt_threshold)) {
+      ERR_PRINTF("ERROR: Failed Setting ListenBeforeTalk Threshold to %d on "
+           "channel: %d\n", zw_lbt, channel_idx);
+      return TRUE;
+    }
+    DBG_PRINTF("Setting ListenBeforeTalk Threshold to %d channel: %d\n",
+               zw_lbt, channel_idx);
+  }
+
+  return TRUE;
+}
+
 /*---------------------------------------------------------------------------*/
 /*--- ZIP Router --------*/
 static BOOL
@@ -1054,7 +1120,6 @@ ZIP_Router_Reset() CC_REENTRANT_ARG
   network_management_init_done = 0;
 
   uint8_t rfregion;
-  uint8_t channel_idx, max_idx;
   if(ZW_GECKO_CHIP_TYPE(chip_desc.my_chip_type)) {
     rfregion = ZW_RFRegionGet();
   } else {
@@ -1062,22 +1127,8 @@ ZIP_Router_Reset() CC_REENTRANT_ARG
   }
 
   rfregion = RF_REGION_CHECK(rfregion);
-  if(rfregion != 0xFE) { 
-    if ((rfregion == JP) || (rfregion == KR)) {
-      max_idx = 3;
-    } else {
-      max_idx = 2;
-    }
-    for (channel_idx = 0; channel_idx < max_idx; channel_idx++) {
-      if(!ZW_SetListenBeforeTalkThreshold(channel_idx, cfg.zw_lbt)) {
-        ERR_PRINTF("ERROR: Failed Setting ListenBeforeTalk Threshold to %d on "
-             "channel: %d\n", cfg.zw_lbt, channel_idx);
-        goto err;
-      }
-      DBG_PRINTF("Setting ListenBeforeTalk Threshold to %d channel: %d\n",
-                 cfg.zw_lbt, channel_idx);
-    }
-  }
+  zip_lbt_configure_threshold(chip_desc.my_chip_type, rfregion,
+                              cfg.is_zw_lbt_set, cfg.zw_lbt);
 err:
   return TRUE;
 }

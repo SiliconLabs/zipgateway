@@ -52,6 +52,7 @@ many sections. Essentially, the key words “MUST”, “MUST NOT”, “REQUIRE
   - 5.2 Platform Requirements
   - 5.3 Important Notes
     - 5.3.1 UART Connection Security
+    - 5.3.2 LBT Threshold Configuration Migration
   - 5.4 Technical Support
 - 6 Legal
   - 6.1 Disclaimer
@@ -791,6 +792,19 @@ This is important to understand since:
 It is therefore recommended that tamper-resistant products designs 
 incorporate additional measures to prevent and/or detect physical access 
 to the NCP module as well as the host hardware platform."
+
+#### 5.3.2 LBT Threshold Configuration Migration
+
+`ZWLBT` no longer has an implicit gateway-supplied default value.
+
+When `ZWLBT` is absent from `zipgateway.cfg`, the gateway does not program an
+LBT override and leaves the module's regulatory-region default in place.
+
+If `ZWLBT` is explicitly configured:
+
+- 500-series modules continue to use the legacy `34..78` encoding.
+- 700/800-series modules must use a negative dBm value such as `-80` or `-65`.
+  Legacy positive `34..78` values are ignored on those chips.
 
 ### 5.4 Technical Support
 

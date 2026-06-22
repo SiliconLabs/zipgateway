@@ -340,24 +340,30 @@ Hex encoded byte stream of ZIP Gateway device id. (Default: MAC address of ZIP G
 
 .TP
 .B ZWLBT
-Set the Lsten Before Talk Threshold anytime Z/IP Gateway resets the Z-Wave chip 
-The threshold controlles at what RSSI level a Z-Wave node will refuse to 
-transmit because of noise.
+Override the Listen Before Talk (LBT) threshold every time the Z/IP Gateway
+resets the Z-Wave chip. The threshold controls the RSSI level above which a
+Z-Wave node refuses to transmit because the channel is considered busy.
 
-The appropriate value range goes from 34(decimal) to 78(decimal) and each
-threshold step corresponds to a 1.5dB input power step. For instance, if a SAW 
-filter with an insertion loss of 3dB is inserted between the antenna 
-feed-point and the chip on a JP product, the threshold value should be set to 
-48(decimal) .
+This setting is optional. When ZWLBT is not present, the Z/IP Gateway leaves the
+chip's regulatory region default in place. Only set ZWLBT if you have a specific
+reason to override the regional default (for example, to compensate for a SAW
+filter insertion loss).
 
-See "4.3.3.11 ZW_SetListenBeforeTalkThreshold" section in 
-Z-Wave 500/700/800 Series Appl. Programmers Guide for more information
+The encoding of the value depends on the connected chip generation:
 
-NOTE: You should set ZWRFRegion to the frequency used for Z-wave 500 series
-to set LBT.
+500-series: legacy unsigned index in the range 34 to 78 (decimal), where each
+step corresponds to a 1.5 dB input power step.
 
-Default: 64 decimal (50 decimal for JP Frequency)
-Valid Range: 34 decimal to 78 decimal
+See "4.3.3.11 ZW_SetListenBeforeTalkThreshold" section in the Z-Wave Host API
+Specification for more information.
+
+Other series, including 700/800-series: signed dBm, matching the Z-Wave Host
+API Specification. The value must be negative (for example, -80 for JP, -65 for
+KR). Non-negative or out-of-range values are rejected and the chip default is
+kept.
+
+Default: unset (chip regulatory region default is used)
+Valid Range: negative dBm on 700/800-series, 34 to 78 decimal on 500-series
 
 .SH SEE ALSO
 .BR brctl (8),

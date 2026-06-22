@@ -77,6 +77,36 @@ bool zgw_idle(void);
  */
 BYTE isClassicZWAddr(uip_ip6addr_t* ip);
 
+/** Resolve the LBT threshold wire byte for a given chip type.
+ *
+ * The ZWLBT byte has a different meaning per chip generation: signed dBm on
+ * 700/800-series (as per specification) and the legacy unsigned 34-78 index
+ * on 500-series.
+ *
+ * \param chip_type Chip type as reported by the Serial API.
+ * \param value     Configured ZWLBT value (signed dBm for Gecko, 34-78 for 500).
+ * \param out_byte  Receives the byte to send when the value is valid.
+ * \return true and sets *out_byte when valid for the chip; false to skip the
+ *         override (leaving the chip's regulatory region default in place).
+ */
+bool zip_lbt_resolve_threshold(uint8_t chip_type, int value, uint8_t *out_byte);
+
+/** Apply the optional ZWLBT override for the selected chip.
+ *
+ * When no explicit override is configured, this function leaves the chip's
+ * LBT configuration in place and logs that decision. When an
+ * override is configured, it validates the value for the chip generation and
+ * applies it to each active Z-Wave channel for the current RF region.
+ *
+ * \param chip_type     Chip type as reported by the Serial API.
+ * \param rfregion      RF region used to determine the active channel count.
+ * \param is_zw_lbt_set Non-zero when the operator explicitly configured ZWLBT.
+ * \param zw_lbt        Configured ZWLBT value.
+ * \return TRUE. Invalid or unsupported overrides are ignored fail-open.
+ */
+bool zip_lbt_configure_threshold(uint8_t chip_type, uint8_t rfregion,
+                                 int is_zw_lbt_set, int zw_lbt);
+
 /* TODO: Move ? */
 #ifdef __ASIX_C51__
 void Reset_Gateway(void) CC_REENTRANT_ARG;
