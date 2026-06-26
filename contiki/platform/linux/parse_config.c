@@ -391,16 +391,16 @@ void ConfigInit()
     else {
       cfg.rfregion = 0xFE;
     }
-    if (cfg.rfregion == 0x20 ) { //Japan 
-      cfg.zw_lbt = atoi(config_get_val("ZWLBT", "50"));
-      if ((cfg.zw_lbt < 34) || (cfg.zw_lbt > 78)) {
-        cfg.zw_lbt = 50;
-      }
+    /* ZWLBT is opt-in: only override the chip's regulatory region default when
+     * the operator explicitly sets it. The value is interpreted by chip type at
+     * apply time (signed dBm on 700/800, legacy 34-78 on 500-series), so it is
+     * stored verbatim here and validated in ZIP_Router. */
+    s = config_get_val("ZWLBT", NULL);
+    if (s != NULL) {
+      cfg.zw_lbt = atoi(s);
+      cfg.is_zw_lbt_set = 1;
     } else {
-      cfg.zw_lbt = atoi(config_get_val("ZWLBT", "64"));
-      if ((cfg.zw_lbt < 34) || (cfg.zw_lbt > 78)) {
-        cfg.zw_lbt = 64;
-      }
+      cfg.is_zw_lbt_set = 0;
     }
     endptr = NULL;
     int16_t max_lr_tx_powerlevel;

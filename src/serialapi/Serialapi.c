@@ -1738,10 +1738,10 @@ uint8_t ZW_SendSUCID(uint16_t node, uint8_t txOption,
  * RET:
  * 0 - failed, 1 - success
  */
-uint8_t ZW_SetListenBeforeTalkThreshold(uint8_t bChannel, uint8_t bThreshold) {
+uint8_t ZW_SetListenBeforeTalkThreshold(uint8_t bChannel, int8_t bThreshold) {
   idx = 0;
   buffer[idx++] = bChannel;
-  buffer[idx++] = bThreshold;
+  buffer[idx++] = (uint8_t)bThreshold;
   SendFrameWithResponse(FUNC_ID_ZW_SET_LISTEN_BEFORE_TALK_THRESHOLD, buffer, idx , buffer, 0);
   return buffer[IDX_DATA];
 }

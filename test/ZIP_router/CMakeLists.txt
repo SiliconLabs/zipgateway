@@ -1,7 +1,7 @@
 
 if( NOT APPLE )
   add_unity_test(NAME test_ZIP_router FILES test_ZIP_router.c ../zipgateway_main_stubs.c LIBRARIES zipgateway-lib)
-  set_target_properties(test_ZIP_router PROPERTIES LINK_FLAGS "-Wl,-wrap=rd_register_new_node -Wl,-wrap=rd_register_node_probe_notifier -Wl,-wrap=mb_wakeup_event -Wl,-wrap=highest_scheme -Wl,-wrap=GetCacheEntryFlag -Wl,-wrap=rd_get_node_probe_flags -Wl,-wrap=rd_get_node_state")
+  set_target_properties(test_ZIP_router PROPERTIES LINK_FLAGS "-Wl,-wrap=rd_register_new_node -Wl,-wrap=rd_register_node_probe_notifier -Wl,-wrap=mb_wakeup_event -Wl,-wrap=highest_scheme -Wl,-wrap=GetCacheEntryFlag -Wl,-wrap=rd_get_node_probe_flags -Wl,-wrap=rd_get_node_state -Wl,-wrap=ZW_SetListenBeforeTalkThreshold")
 
   add_unity_test(NAME test_s2_wrap FILES test_s2_wrap.c ../zipgateway_main_stubs.c LIBRARIES zipgateway-lib )
   set_target_properties(test_s2_wrap PROPERTIES LINK_FLAGS "-Wl,-wrap=dev_urandom -Wl,-wrap=zw_appl_nvm_read -Wl,-wrap=zw_appl_nvm_write")
